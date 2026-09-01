@@ -1,0 +1,6 @@
+# Binary output
+ate-app
+
+# OS & Editor
+.DS_Store
+*.log
