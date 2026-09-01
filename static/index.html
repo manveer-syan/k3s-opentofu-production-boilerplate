@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ATE Operations | Minimal Platform</title>
+  <title>ATE // Minimal Operations</title>
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
   <header>
     <div>
-      <h1>ATE Operations</h1>
-      <div class="subtitle">Go Backend • Monochrome IaC Platform</div>
+      <h1>ATE // OPERATIONS CONTROL</h1>
+      <div class="subtitle">Go Backend • Monochrome IaC Stack</div>
     </div>
-    <div>
+    <div style="display: flex; gap: 1rem;">
       <button id="btn-theme-toggle" class="btn-secondary">Theme</button>
-      <button id="btn-new-op">+ New Task</button>
+      <button id="btn-new-op">+ New Operation</button>
     </div>
   </header>
 
   <div class="stats-grid" id="stats-row"></div>
 
   <div class="controls">
-    <input type="text" id="search-input" placeholder="Search..." />
+    <input type="text" id="search-input" placeholder="Search..." style="flex: 1;" />
     <select id="filter-category">
       <option value="All">All Categories</option>
       <option value="Development">Development</option>
@@ -42,19 +42,19 @@
   <!-- Minimal Modal -->
   <div class="modal-overlay" id="modal">
     <div class="modal-box">
-      <h3 id="modal-title" style="margin-bottom: 12px;">New Operation</h3>
+      <h1 id="modal-title" style="margin-bottom: 2rem;">New Operation</h1>
       <form id="op-form">
         <div class="form-group">
-          <label style="font-size: 0.75rem; text-transform: uppercase;">Title</label>
+          <label style="font-size: 10px; color: var(--muted); text-transform: uppercase;">Title</label>
           <input type="text" id="op-title" required />
         </div>
         <div class="form-group">
-          <label style="font-size: 0.75rem; text-transform: uppercase;">Description</label>
-          <textarea id="op-desc" rows="2"></textarea>
+          <label style="font-size: 10px; color: var(--muted); text-transform: uppercase;">Description</label>
+          <textarea id="op-desc" rows="3"></textarea>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label style="font-size: 0.75rem; text-transform: uppercase;">Category</label>
+            <label style="font-size: 10px; color: var(--muted); text-transform: uppercase;">Category</label>
             <select id="op-category">
               <option value="Development">Development</option>
               <option value="Operations">Operations</option>
@@ -62,7 +62,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label style="font-size: 0.75rem; text-transform: uppercase;">Priority</label>
+            <label style="font-size: 10px; color: var(--muted); text-transform: uppercase;">Priority</label>
             <select id="op-priority">
               <option value="Low">Low</option>
               <option value="Medium" selected>Medium</option>
@@ -73,7 +73,7 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label style="font-size: 0.75rem; text-transform: uppercase;">Status</label>
+            <label style="font-size: 10px; color: var(--muted); text-transform: uppercase;">Status</label>
             <select id="op-status">
               <option value="To Do">To Do</option>
               <option value="In Progress">In Progress</option>
@@ -81,11 +81,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label style="font-size: 0.75rem; text-transform: uppercase;">Lead</label>
+            <label style="font-size: 10px; color: var(--muted); text-transform: uppercase;">Lead</label>
             <input type="text" id="op-lead" />
           </div>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+        <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:2rem;">
           <button type="button" id="btn-cancel" class="btn-secondary">Cancel</button>
           <button type="submit">Save</button>
         </div>

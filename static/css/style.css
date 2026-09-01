@@ -1,119 +1,116 @@
-/* Ultra Minimalist Monochrome CSS */
+/* Minimalist Architecture - Small Text & Generous Spacing */
 :root {
   --bg: #ffffff;
-  --fg: #000000;
-  --border: #cccccc;
-  --subtle: #f0f0f0;
-  --muted: #666666;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121212;
-    --fg: #ffffff;
-    --border: #333333;
-    --subtle: #1e1e1e;
-    --muted: #888888;
-  }
+  --fg: #111111;
+  --muted: #888888;
+  --border: #e5e5e5;
+  --subtle-bg: #fafafa;
+  --font-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
 }
 
 [data-theme="dark"] {
-  --bg: #121212;
-  --fg: #ffffff;
-  --border: #333333;
-  --subtle: #1e1e1e;
-  --muted: #888888;
-}
-
-[data-theme="light"] {
-  --bg: #ffffff;
-  --fg: #000000;
-  --border: #cccccc;
-  --subtle: #f0f0f0;
+  --bg: #0a0a0a;
+  --fg: #ededed;
   --muted: #666666;
+  --border: #222222;
+  --subtle-bg: #111111;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: var(--font);
 }
 
 body {
-  background-color: var(--bg);
+  background: var(--bg);
   color: var(--fg);
-  padding: 20px;
-  max-width: 900px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  letter-spacing: 0.03em;
+  padding: 5rem 2rem;
+  max-width: 960px;
   margin: 0 auto;
-  line-height: 1.4;
 }
 
+/* Header & Huge Vertical Gaps */
 header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px solid var(--fg);
-  padding-bottom: 15px;
-  margin-bottom: 20px;
+  align-items: flex-end;
+  margin-bottom: 5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
 h1 {
-  font-size: 1.4rem;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
 }
 
 .subtitle {
-  font-size: 0.8rem;
+  font-size: 11px;
   color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
+/* Large Spaced Stat Boxes */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 2.5rem;
+  margin-bottom: 5rem;
 }
 
 .stat-card {
+  padding: 1.5rem;
   border: 1px solid var(--border);
-  padding: 10px;
-  background: var(--subtle);
+  background: var(--subtle-bg);
 }
 
 .stat-val {
-  font-size: 1.4rem;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
 }
 
 .stat-lbl {
-  font-size: 0.75rem;
+  font-size: 10px;
   color: var(--muted);
   text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
+/* Controls with Wide Gaps */
 .controls {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 1.5rem;
+  margin-bottom: 4rem;
 }
 
 input, select, button {
-  font-family: inherit;
-  font-size: 0.85rem;
-  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 8px 14px;
   border: 1px solid var(--fg);
   background: var(--bg);
   color: var(--fg);
+  outline: none;
+  letter-spacing: 0.05em;
 }
 
 button {
   cursor: pointer;
   background: var(--fg);
   color: var(--bg);
-  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
 }
 
 button.btn-secondary {
@@ -129,40 +126,50 @@ button.btn-danger {
   text-decoration: underline;
 }
 
+/* Spaced Table Layout */
 table {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 5rem;
   border: 1px solid var(--border);
 }
 
 th, td {
-  padding: 8px 12px;
+  padding: 14px 18px;
   text-align: left;
-  border: 1px solid var(--border);
-  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
 }
 
 th {
-  background: var(--subtle);
-  font-weight: bold;
+  background: var(--subtle-bg);
+  font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+tr:last-child td {
+  border-bottom: none;
 }
 
 .badge {
-  font-size: 0.75rem;
+  font-size: 10px;
   text-transform: uppercase;
-  font-weight: bold;
+  letter-spacing: 0.08em;
 }
 
+/* Modal Overlay */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
+  inset: 0;
+  background: rgba(0,0,0,0.7);
   display: none;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
 }
 
 .modal-overlay.active {
@@ -171,20 +178,20 @@ th {
 
 .modal-box {
   background: var(--bg);
-  border: 2px solid var(--fg);
-  padding: 20px;
-  width: 400px;
+  border: 1px solid var(--fg);
+  padding: 2.5rem;
+  width: 460px;
 }
 
 .form-group {
-  margin-bottom: 12px;
+  margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.5rem;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 1.5rem;
 }
