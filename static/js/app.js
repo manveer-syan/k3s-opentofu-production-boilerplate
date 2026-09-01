@@ -1,10 +1,10 @@
 /**
- * Go Powered Frontend Application logic
+ * Minimalist Go Frontend Logic with Professional Typography
  */
 
 let operations = [];
 let stats = {};
-let currentView = 'grid';
+let currentView = 'table';
 let editingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,15 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function bindEvents() {
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-      currentView = item.getAttribute('data-view');
-      render();
-    });
-  });
-
   document.getElementById('btn-theme-toggle').addEventListener('click', () => {
     const doc = document.documentElement;
     const next = doc.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -36,7 +27,7 @@ function bindEvents() {
     document.getElementById('modal').classList.add('active');
   });
 
-  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-close')?.addEventListener('click', closeModal);
   document.getElementById('btn-cancel').addEventListener('click', closeModal);
 
   document.getElementById('op-form').addEventListener('submit', async (e) => {
@@ -96,11 +87,9 @@ async function fetchStats() {
 async function fetchOperations() {
   const cat = document.getElementById('filter-category').value;
   const prio = document.getElementById('filter-priority').value;
-  const status = document.getElementById('filter-status').value;
   const search = document.getElementById('search-input').value;
 
-  const isArchive = currentView === 'archive';
-  const url = `/api/v1/operations?archived=${isArchive}&category=${encodeURIComponent(cat)}&priority=${encodeURIComponent(prio)}&status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`;
+  const url = `/api/v1/operations?category=${encodeURIComponent(cat)}&priority=${encodeURIComponent(prio)}&search=${encodeURIComponent(search)}`;
 
   try {
     const res = await fetch(url);
@@ -116,18 +105,18 @@ function renderStats() {
   container.innerHTML = `
     <div class="stat-card">
       <div class="stat-val">${stats.total || 0}</div>
-      <div class="stat-lbl">Active Operations</div>
+      <div class="stat-lbl">Active Ops</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val" style="color: #10b981;">${stats.completed || 0} (${stats.completionRate || 0}%)</div>
+      <div class="stat-val">${stats.completed || 0} (${stats.completionRate || 0}%)</div>
       <div class="stat-lbl">Completed</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val" style="color: #f59e0b;">${stats.inProgress || 0}</div>
+      <div class="stat-val">${stats.inProgress || 0}</div>
       <div class="stat-lbl">In Progress</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val" style="color: #ef4444;">${stats.overdue || 0}</div>
+      <div class="stat-val">${stats.overdue || 0}</div>
       <div class="stat-lbl">Overdue</div>
     </div>
   `;
@@ -136,80 +125,38 @@ function renderStats() {
 function render() {
   const container = document.getElementById('view-container');
   if (!operations || operations.length === 0) {
-    container.innerHTML = '<div style="text-align:center; padding: 3rem; color: var(--text-secondary);">No operations found.</div>';
+    container.innerHTML = '<div style="text-align:center; padding: 4rem 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px;">NO OPERATIONS FOUND</div>';
     return;
   }
 
-  if (currentView === 'table' || currentView === 'archive') {
-    renderTable(container);
-  } else if (currentView === 'analytics') {
-    renderAnalytics(container);
-  } else {
-    renderGrid(container);
-  }
-}
-
-function renderGrid(container) {
-  const cards = operations.map(op => `
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:0.75rem; color:var(--text-secondary);">${op.category}</span>
-        <span class="badge badge-${op.priority.toLowerCase()}">${op.priority}</span>
-      </div>
-      <h4 style="font-size:1.05rem;">${escapeHtml(op.title)}</h4>
-      <p style="font-size:0.85rem; color:var(--text-secondary);">${escapeHtml(op.description || 'No description')}</p>
-      <div style="display:flex; justify-content:space-between; font-size:0.8rem; border-top:1px solid var(--border); padding-top:0.5rem; margin-top:0.5rem;">
-        <span>👤 ${escapeHtml(op.lead || 'Unassigned')}</span>
-        <span>⏱️ ${op.estimatedHours}h</span>
-      </div>
-      <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
-        <button class="btn btn-secondary" onclick="editOp('${op.id}')" style="padding:0.3rem 0.6rem; font-size:0.8rem;">Edit</button>
-        <button class="btn btn-danger" onclick="archiveOp('${op.id}', ${!op.archived})" style="padding:0.3rem 0.6rem; font-size:0.8rem;">
-          ${op.archived ? 'Restore' : 'Archive'}
-        </button>
-      </div>
-    </div>
-  `).join('');
-  container.innerHTML = `<div class="grid-view">${cards}</div>`;
+  renderTable(container);
 }
 
 function renderTable(container) {
   const rows = operations.map(op => `
     <tr>
+      <td class="mono" style="font-weight: 600;">${op.id}</td>
       <td><strong>${escapeHtml(op.title)}</strong></td>
-      <td>${op.category}</td>
-      <td><span class="badge badge-${op.priority.toLowerCase()}">${op.priority}</span></td>
-      <td>${op.status}</td>
-      <td>${escapeHtml(op.lead || 'Unassigned')}</td>
-      <td>${op.dueDate}</td>
-      <td>
-        <button class="btn btn-secondary" onclick="editOp('${op.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;">Edit</button>
-        <button class="btn btn-danger" onclick="deleteOp('${op.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;">Delete</button>
+      <td class="mono">${op.category}</td>
+      <td class="mono"><span class="badge">${op.priority}</span></td>
+      <td class="mono">${op.status}</td>
+      <td class="mono">${escapeHtml(op.lead || '-')}</td>
+      <td class="mono">${op.dueDate || '-'}</td>
+      <td class="mono" style="text-align: right;">
+        <button class="btn-secondary" onclick="editOp('${op.id}')" style="padding:4px 8px; font-size:10px;">Edit</button>
+        <button class="btn-danger" onclick="deleteOp('${op.id}')" style="padding:4px 8px; font-size:10px; margin-left: 4px;">Del</button>
       </td>
     </tr>
   `).join('');
 
   container.innerHTML = `
-    <table class="table">
+    <table>
       <thead>
-        <tr><th>Title</th><th>Category</th><th>Priority</th><th>Status</th><th>Lead</th><th>Due Date</th><th>Actions</th></tr>
+        <tr><th>ID</th><th>Title</th><th>Category</th><th>Priority</th><th>Status</th><th>Lead</th><th>Due Date</th><th style="text-align: right;">Actions</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
   `;
-}
-
-function renderAnalytics(container) {
-  const categories = stats.categoryBreakdown || {};
-  const items = Object.entries(categories).map(([cat, val]) => `
-    <div style="margin-bottom: 1rem;">
-      <div style="display:flex; justify-content:space-between; font-size:0.9rem;"><span>${cat}</span><span>${val} tasks</span></div>
-      <div style="height:8px; background:var(--bg-primary); border-radius:4px; margin-top:4px; overflow:hidden;">
-        <div style="height:100%; width:${(val/(stats.total||1))*100}%; background:var(--accent);"></div>
-      </div>
-    </div>
-  `).join('');
-  container.innerHTML = `<div class="stat-card" style="max-width:500px;"><h3>Category Distribution</h3><div style="margin-top:1rem;">${items}</div></div>`;
 }
 
 window.editOp = async function(id) {
@@ -224,18 +171,7 @@ window.editOp = async function(id) {
   document.getElementById('op-status').value = op.status;
   document.getElementById('op-lead').value = op.lead;
   document.getElementById('op-date').value = op.dueDate;
-  document.getElementById('op-hours').value = op.estimatedHours;
   document.getElementById('modal').classList.add('active');
-};
-
-window.archiveOp = async function(id, archived) {
-  await fetch(`/api/v1/operations/${id}/archive`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ archived })
-  });
-  fetchStats();
-  fetchOperations();
 };
 
 window.deleteOp = async function(id) {
