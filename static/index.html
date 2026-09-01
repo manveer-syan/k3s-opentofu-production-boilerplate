@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ATE Operations | Minimal IaC Platform</title>
+  <title>ATE Operations | Minimal Platform</title>
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
   <header>
     <div>
-      <h1>ATE Operations Control</h1>
-      <p class="subtitle">Go Backend • Monochrome IaC Platform</p>
+      <h1>ATE Operations</h1>
+      <div class="subtitle">Go Backend • Monochrome IaC Platform</div>
     </div>
     <div>
       <button id="btn-theme-toggle" class="btn-secondary">Theme</button>
-      <button id="btn-new-op">+ New Operation</button>
+      <button id="btn-new-op">+ New Task</button>
     </div>
   </header>
 
   <div class="stats-grid" id="stats-row"></div>
 
   <div class="controls">
-    <input type="text" id="search-input" placeholder="Filter operations..." />
+    <input type="text" id="search-input" placeholder="Search..." />
     <select id="filter-category">
       <option value="All">All Categories</option>
       <option value="Development">Development</option>
@@ -42,19 +42,19 @@
   <!-- Minimal Modal -->
   <div class="modal-overlay" id="modal">
     <div class="modal-box">
-      <h3 id="modal-title" style="margin-bottom: 1rem;">New Operation</h3>
+      <h3 id="modal-title" style="margin-bottom: 12px;">New Operation</h3>
       <form id="op-form">
         <div class="form-group">
-          <label style="font-size: 0.8rem;">Title</label>
+          <label style="font-size: 0.75rem; text-transform: uppercase;">Title</label>
           <input type="text" id="op-title" required />
         </div>
         <div class="form-group">
-          <label style="font-size: 0.8rem;">Description</label>
+          <label style="font-size: 0.75rem; text-transform: uppercase;">Description</label>
           <textarea id="op-desc" rows="2"></textarea>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label style="font-size: 0.8rem;">Category</label>
+            <label style="font-size: 0.75rem; text-transform: uppercase;">Category</label>
             <select id="op-category">
               <option value="Development">Development</option>
               <option value="Operations">Operations</option>
@@ -62,7 +62,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label style="font-size: 0.8rem;">Priority</label>
+            <label style="font-size: 0.75rem; text-transform: uppercase;">Priority</label>
             <select id="op-priority">
               <option value="Low">Low</option>
               <option value="Medium" selected>Medium</option>
@@ -73,7 +73,7 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label style="font-size: 0.8rem;">Status</label>
+            <label style="font-size: 0.75rem; text-transform: uppercase;">Status</label>
             <select id="op-status">
               <option value="To Do">To Do</option>
               <option value="In Progress">In Progress</option>
@@ -81,11 +81,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label style="font-size: 0.8rem;">Lead</label>
+            <label style="font-size: 0.75rem; text-transform: uppercase;">Lead</label>
             <input type="text" id="op-lead" />
           </div>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1rem;">
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
           <button type="button" id="btn-cancel" class="btn-secondary">Cancel</button>
           <button type="submit">Save</button>
         </div>
