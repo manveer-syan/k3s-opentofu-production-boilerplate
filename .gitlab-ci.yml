@@ -1,6 +1,6 @@
 stages:
   - lint_and_test
-  - build
+  - compile
   - docker_build
   - deploy
 
@@ -10,59 +10,50 @@ variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
 
 # ----------------------------------------------------
-# Stage 1: Dependency Check & Build Test
+# Stage 1: Go Tests
 # ----------------------------------------------------
-test:
+unit_tests:
   stage: lint_and_test
-  image: node:20-alpine
+  image: golang:1.22-alpine
   script:
-    - npm ci
-    - npm run build
+    - go test -v ./...
+
+# ----------------------------------------------------
+# Stage 2: Go Compile Verification
+# ----------------------------------------------------
+compile_binary:
+  stage: compile
+  image: golang:1.22-alpine
+  script:
+    - go build -o ate-app main.go
   artifacts:
     paths:
-      - dist/
+      - ate-app
     expire_in: 1 day
 
 # ----------------------------------------------------
-# Stage 2: Production Assets Build
+# Stage 3: Docker Image Build
 # ----------------------------------------------------
-build_job:
-  stage: build
-  image: node:20-alpine
-  script:
-    - npm ci
-    - npm run build
-  artifacts:
-    paths:
-      - dist/
-    expire_in: 1 week
-
-# ----------------------------------------------------
-# Stage 3: Docker Image Build & Container Registry Push
-# ----------------------------------------------------
-docker_build_job:
+docker_build:
   stage: docker_build
   image: docker:24.0.5-dind
   services:
     - docker:24.0.5-dind
   script:
     - docker build -t $IMAGE_TAG .
-    - echo "Docker image built successfully: $IMAGE_TAG"
-    # To push to GitLab Container Registry when enabled:
-    # - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    # - docker push $IMAGE_TAG
+    - echo "Successfully built Go container image: $IMAGE_TAG"
   only:
     - main
     - dev
 
 # ----------------------------------------------------
-# Stage 4: Staging / Dev Deployment
+# Stage 4: Deployment
 # ----------------------------------------------------
-deploy_dev:
+deploy_staging:
   stage: deploy
   script:
-    - echo "Deploying ATE Suite to Dev / Staging environment..."
+    - echo "Deploying Go Operations Suite to Staging..."
   environment:
-    name: development
+    name: staging
   only:
     - dev

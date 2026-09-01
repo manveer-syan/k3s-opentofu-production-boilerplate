@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATE Operations Suite (Go Powered)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo">GO</div>
+        <div>
+          <h2>ATE Operations Suite</h2>
+          <p class="subtitle">Go Powered • DevOps Control Platform</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <input type="text" id="search-input" placeholder="Search operations..." />
+        <button id="btn-theme-toggle" class="btn btn-secondary">🌓 Theme</button>
+        <button id="btn-new-op" class="btn btn-primary">+ New Operation</button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="nav-item active" data-view="grid">📋 Card Grid</div>
+        <div class="nav-item" data-view="table">📊 Data Table</div>
+        <div class="nav-item" data-view="analytics">📈 Analytics</div>
+        <div class="nav-item" data-view="archive">📦 Archive</div>
+      </aside>
+
+      <!-- Content -->
+      <main class="main-content">
+        <!-- Metric Stats Row -->
+        <div class="stats-row" id="stats-row"></div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filters">
+            <select id="filter-category">
+              <option value="All">All Categories</option>
+              <option value="Development">Development</option>
+              <option value="Design">Design</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Finance">Finance</option>
+              <option value="Operations">Operations</option>
+            </select>
+
+            <select id="filter-priority">
+              <option value="All">All Priorities</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </select>
+
+            <select id="filter-status">
+              <option value="All">All Statuses</option>
+              <option value="Backlog">Backlog</option>
+              <option value="To Do">To Do</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- View Content -->
+        <div id="view-container"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">New Operation</h3>
+        <button id="modal-close" class="btn-close">✕</button>
+      </div>
+      <form id="op-form">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" id="op-title" required placeholder="e.g. Go Microservice Refactoring" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="op-desc" rows="3" placeholder="Operational details..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="op-category">
+              <option value="Development">Development</option>
+              <option value="Design">Design</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Finance">Finance</option>
+              <option value="Operations">Operations</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select id="op-priority">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Status</label>
+            <select id="op-status">
+              <option value="Backlog">Backlog</option>
+              <option value="To Do" selected>To Do</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Lead</label>
+            <input type="text" id="op-lead" placeholder="e.g. Manveer Singh" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Target Date</label>
+            <input type="date" id="op-date" />
+          </div>
+          <div class="form-group">
+            <label>Hours</label>
+            <input type="number" id="op-hours" min="0" value="8" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Operation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>

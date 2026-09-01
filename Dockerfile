@@ -1,42 +1,46 @@
 # ==========================================
-# Stage 1: Build Environment
+# Stage 1: Build Go Binary
 # ==========================================
-FROM node:20-alpine AS build-stage
+FROM golang:1.22-alpine AS builder
+
+# Install build tools & SSL certs
+RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-# Copy dependency definition files
-COPY package*.json ./
+# Cache Go modules
+COPY go.mod ./
+RUN go mod download
 
-# Install dependencies cleanly
-RUN npm ci --only=production=false
-
-# Copy remaining source files
+# Copy source code
 COPY . .
 
-# Build production static bundle
-RUN npm run build
+# Build statically compiled binary without CGO dependencies
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o /app/ate-app main.go
 
 # ==========================================
-# Stage 2: Production Serving Environment
+# Stage 2: Ultra-Minimal Production Runtime (~15MB Image)
 # ==========================================
-FROM nginx:1.25-alpine AS production-stage
+FROM alpine:3.19 AS runtime
 
-# Remove default nginx static assets
-RUN rm -rf /usr/share/nginx/html/*
+RUN apk add --no-cache ca-certificates tzdata curl
 
-# Copy compiled static assets from build stage
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy compiled Go binary
+COPY --from=builder /app/ate-app /app/ate-app
 
-# Expose port 80
-EXPOSE 80
+# Expose HTTP Port
+EXPOSE 8080
 
-# Add container healthcheck instruction
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+# Environment variables
+ENV PORT=8080
 
-# Start Nginx server
-CMD ["nginx", "-g", "daemon off;"]
+# Container Health check instruction
+HEALTHCHECK --interval=20s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+# Execute binary
+CMD ["/app/ate-app"]
