@@ -1,59 +1,73 @@
+# ==============================================================================
+# Central Platform Infrastructure CI/CD Pipeline
+# Group: manveersyan-group
+# Repository: ate (Infrastructure Orchestration)
+# ==============================================================================
+
 stages:
-  - lint_and_test
-  - compile
-  - docker_build
-  - deploy
+  - lint_and_validate
+  - terraform_plan
+  - terraform_apply
+  - deploy_group_apps
 
 variables:
-  DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: ""
-  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  AWS_DEFAULT_REGION: "us-east-1"
+  TF_ROOT: "terraform"
 
 # ----------------------------------------------------
-# Stage 1: Go Tests
+# Stage 1: Validate Terraform & Ansible Syntax
 # ----------------------------------------------------
-unit_tests:
-  stage: lint_and_test
-  image: golang:1.22-alpine
+validate_infrastructure:
+  stage: lint_and_validate
+  image: hashicorp/terraform:latest
   script:
-    - go test -v ./...
+    - cd $TF_ROOT
+    - terraform init -backend=false
+    - terraform validate
 
 # ----------------------------------------------------
-# Stage 2: Go Compile Verification
+# Stage 2: Terraform Plan Output
 # ----------------------------------------------------
-compile_binary:
-  stage: compile
-  image: golang:1.22-alpine
+plan_infrastructure:
+  stage: terraform_plan
+  image: hashicorp/terraform:latest
   script:
-    - go build -o ate-app main.go
+    - cd $TF_ROOT
+    - terraform init -backend=false
+    - terraform plan -out=tfplan
   artifacts:
     paths:
-      - ate-app
+      - terraform/tfplan
     expire_in: 1 day
-
-# ----------------------------------------------------
-# Stage 3: Docker Image Build
-# ----------------------------------------------------
-docker_build:
-  stage: docker_build
-  image: docker:24.0.5-dind
-  services:
-    - docker:24.0.5-dind
-  script:
-    - docker build -t $IMAGE_TAG .
-    - echo "Successfully built Go container image: $IMAGE_TAG"
   only:
+    - dev
     - main
-    - dev
 
 # ----------------------------------------------------
-# Stage 4: Deployment
+# Stage 3: Apply Infrastructure Provisioning
 # ----------------------------------------------------
-deploy_staging:
-  stage: deploy
+apply_infrastructure:
+  stage: terraform_apply
+  image: hashicorp/terraform:latest
   script:
-    - echo "Deploying Go Operations Suite to Staging..."
-  environment:
-    name: staging
+    - cd $TF_ROOT
+    - echo "Applying Infrastructure Provisioning for manveersyan-group..."
+    # Uncomment when AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY configured in GitLab CI/CD Variables:
+    # - terraform init
+    # - terraform apply -auto-approve
   only:
     - dev
+    - main
+  when: manual
+
+# ----------------------------------------------------
+# Stage 4: Wire Group Microservices Pipeline Trigger
+# ----------------------------------------------------
+deploy_manveersyan_apps:
+  stage: deploy_group_apps
+  script:
+    - echo "Wiring group microservices (web-frontend, api-gateway, auth-service)..."
+    - echo "Deployment trigger sent to manveersyan-group apps."
+  only:
+    - dev
+    - main

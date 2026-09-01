@@ -1,187 +1,109 @@
-# 🚀 ATE Operations Control Platform
+# 🌐 Central Infrastructure & Platform Engineering Repository
 
-![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=flat-square&logo=go)
-![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED?style=flat-square&logo=docker)
-![GitLab CI](https://img.shields.io/badge/GitLab_CI-Pipeline-FC6D26?style=flat-square&logo=gitlab)
-![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?style=flat-square&logo=terraform)
-![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-326CE5?style=flat-square&logo=kubernetes)
-![Ansible](https://img.shields.io/badge/Automation-Ansible-EE0000?style=flat-square&logo=ansible)
+![GitLab Group](https://img.shields.io/badge/GitLab_Group-manveersyan--group-FC6D26?style=flat-square&logo=gitlab)
+![Terraform](https://img.shields.io/badge/IaC-Terraform_Modular-7B42BC?style=flat-square&logo=terraform)
+![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes_Group_Cluster-326CE5?style=flat-square&logo=kubernetes)
+![Ansible](https://img.shields.io/badge/Automation-Ansible_Roles-EE0000?style=flat-square&logo=ansible)
 
-A production-ready, high-performance operations management microservice engineered in **Golang**. Features an embedded minimalist monochrome Web UI (`Inter` & `JetBrains Mono` typography), thread-safe in-memory state engine (`sync.RWMutex`), RESTful API endpoints, and a complete **Infrastructure as Code (IaC)** deployment suite (**Terraform**, **Ansible**, **Kubernetes**, **GitLab CI**).
+This repository (`manveersyan-group/ate`) serves as the **Central Infrastructure & Platform Engineering Control Center** for the **`manveersyan-group`** on GitLab.
+
+It contains no application source code. Instead, it provides the modular **Infrastructure as Code (IaC)**, **Ansible Playbooks**, **Kubernetes Cluster Manifests**, and **GitLab CI Multi-Project Pipelines** to provision, wire, and orchestrate all microservices in the `manveersyan-group` (e.g. `web-frontend`, `api-gateway`, `auth-service`).
 
 ---
 
-## 📐 Architecture Overview
+## 📐 Group Infrastructure Architecture
 
 ```
-+-----------------------------------------------------------------------+
-|                             CLIENT / BROWSER                          |
-|             (Minimalist Monochrome UI - Inter & JetBrains Mono)        |
-+-----------------------------------------------------------------------+
-                                   |
-                         HTTP Port 8080 (REST / Static)
-                                   v
-+-----------------------------------------------------------------------+
-|                         GOLANG HTTP SERVER                            |
-|                                                                       |
-|  +-----------------------+     +-----------------------------------+  |
-|  |   http.FileServer     |     |          http.ServeMux            |  |
-|  |  (embed.FS Static UI) |     |       (REST API & Health)         |  |
-|  +-----------------------+     +-----------------------------------+  |
-|                                                  |                    |
-|                                                  v                    |
-|                                +-----------------------------------+  |
-|                                |     Thread-Safe Memory Store      |  |
-|                                |         (sync.RWMutex)            |  |
-|                                +-----------------------------------+  |
-+-----------------------------------------------------------------------+
-                                   |
-       +---------------------------+---------------------------+
-       |                           |                           |
-       v                           v                           v
-+--------------+           +--------------+           +------------------+
-|  TERRAFORM   |           |   ANSIBLE    |           |    KUBERNETES    |
-| (Docker Provider)|       | (Playbook Setup)|        | (Deployment/HPA) |
-+--------------+           +--------------+           +------------------+
++---------------------------------------------------------------------------------+
+|                       GITLAB GROUP: manveersyan-group                            |
+|                                                                                 |
+|  +--------------------+    +--------------------+    +-----------------------+  |
+|  |    web-frontend    |    |    api-gateway     |    |     auth-service      |  |
+|  | (GitLab Repo #1)   |    | (GitLab Repo #2)   |    |  (GitLab Repo #3)     |  |
+|  +--------------------+    +--------------------+    +-----------------------+  |
+|            |                        |                        |                  |
+|            +------------------------+------------------------+                  |
+|                                     |                                           |
+|                                     v (Pushes Container Images)                 |
+|                   +------------------------------------+                        |
+|                   |   GitLab Group Container Registry  |                        |
+|                   | (registry.gitlab.com/manveersyan-g)|                        |
+|                   +------------------------------------+                        |
++---------------------------------------------------------------------------------+
+                                      |
+                                      | (Wired & Provisioned By)
+                                      v
++---------------------------------------------------------------------------------+
+|              THIS REPO: manveersyan-group/ate (Central Infrastructure)          |
+|                                                                                 |
+|   +-------------------+    +--------------------+    +----------------------+   |
+|   |  Terraform Modules|    |  Ansible Playbooks |    | Kubernetes Manifests |   |
+|   | (EC2 / SG / EIP)  |    | (Host Provisioning)|    | (Ingress / Services) |   |
+|   +-------------------+    +--------------------+    +----------------------+   |
++---------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 🛠️ Project Repository Structure
+## 📂 Repository Directory Layout
 
 ```
 ATE/
-├── main.go                 # Application entry point, embedded FS & HTTP router
-├── go.mod                  # Go module definition
-├── models/
-│   └── operation.go        # Operation & OperationalStats data models
-├── store/
-│   ├── store.go            # Thread-safe in-memory store (sync.RWMutex)
-│   └── store_test.go       # Go unit tests (100% test coverage)
-├── handlers/
-│   └── handlers.go         # REST API handlers (/api/v1/operations, /health, /stats)
-├── static/                 # Embedded static Web UI
-│   ├── index.html          # Minimalist HTML layout
-│   ├── css/style.css       # Monochrome CSS with Inter & JetBrains Mono typography
-│   └── js/app.js           # REST API client logic
-├── terraform/              # Terraform / OpenTofu IaC manifests
-│   ├── main.tf             # Docker provider & container resources
-│   ├── variables.tf        # Input variable definitions
-│   └── outputs.tf          # Endpoint outputs
-├── ansible/                # Ansible Automation
-│   ├── inventory.ini       # Target hosts inventory
-│   └── playbook.yml        # Container deployment & health verification
-├── k8s/                    # Kubernetes Declarative Manifests
-│   ├── deployment.yaml     # 3-replica Deployment with Liveness & Readiness probes
-│   ├── service.yaml        # NodePort Service (Port 30080)
-│   ├── ingress.yaml        # Nginx Ingress routing controller
-│   └── hpa.yaml            # Horizontal Pod Autoscaler (2 to 10 pods @ 70% CPU)
-├── Dockerfile              # Multi-stage build (golang:alpine -> alpine:3.19 ~15MB)
-├── docker-compose.yml      # Docker Compose orchestration with resource limits
-├── .gitlab-ci.yml          # GitLab CI pipeline configuration
-├── Makefile                # Developer & DevOps operational shortcuts
-└── README.md               # Project documentation
+├── README.md               # Central Platform Architecture & Wiring Guide
+├── INFRASTRUCTURE_PLAN.md  # Multi-App GitLab Group Orchestration Plan
+├── Makefile                # Unified Infra operational targets
+├── .gitlab-ci.yml          # Central Multi-Project Pipeline Runner
+├── .gitignore              # Infra state & secret exclusions
+├── terraform/              # Modular Infrastructure as Code (AWS/Docker)
+│   ├── main.tf             # Central orchestration wiring group microservices
+│   ├── variables.tf        # Shared group environment variables
+│   ├── outputs.tf          # Group microservice URLs & Elastic IP output
+│   └── modules/
+│       ├── app_service/    # Reusable Microservice App Module
+│       └── networking/     # Shared Security Group & Firewall Module
+├── ansible/                # Configuration Management & Multi-App Wiring
+│   ├── inventory.ini       # Platform host inventory
+│   ├── site.yml            # Main playbook
+│   └── roles/
+│       ├── common/         # Host preparation & Docker setup
+│       └── wire_apps/      # Wire group containers together
+└── k8s/                    # Enterprise Kubernetes Manifests
+    ├── 00-namespace.yaml   # Dedicated manveersyan-group namespace
+    ├── 01-ingress.yaml     # Group Ingress Router (path-based routing)
+    └── apps/               # Declarative microservice manifests
+        ├── web-frontend.yaml
+        ├── api-gateway.yaml
+        └── auth-service.yaml
 ```
 
 ---
 
-## 🔌 REST API Specification
+## 🛠️ Group Microservices Integration Matrix
 
-The microservice exposes a clean RESTful JSON API:
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/health` | DevOps monitoring healthcheck endpoint |
-| `GET` | `/api/v1/stats` | System operational statistics & category breakdown |
-| `GET` | `/api/v1/operations` | Query active operations (supports `category`, `priority`, `search`) |
-| `POST` | `/api/v1/operations` | Create a new operation |
-| `GET` | `/api/v1/operations/{id}` | Retrieve operation details by ID |
-| `PUT` | `/api/v1/operations/{id}` | Update existing operation |
-| `DELETE` | `/api/v1/operations/{id}` | Permanently delete operation |
-
-### Sample Response: `GET /health`
-```json
-{
-  "service": "ate-operations-go",
-  "status": "healthy",
-  "timestamp": "2026-09-01T17:30:00Z",
-  "uptime": "running"
-}
-```
+| Microservice | Container Port | Exposed Host Port | Subdomain / Ingress Path |
+| :--- | :--- | :--- | :--- |
+| **`web-frontend`** | `3000` | `3000` | `app.manveersyan.com/` |
+| **`api-gateway`** | `8080` | `8080` | `app.manveersyan.com/api` |
+| **`auth-service`** | `5000` | `5000` | `app.manveersyan.com/auth` |
 
 ---
 
-## 🚀 Local Development & Execution
+## 🚀 Provisioning & Wiring Commands
 
-### 1. Run via Go CLI
-```bash
-# Build standalone binary
-go build -o ate-app main.go
-
-# Start application server
-./ate-app
-# Application listening on http://localhost:8080
-```
-
-### 2. Execute Unit Tests
-```bash
-go test -v ./...
-```
-
----
-
-## 🐳 Docker Deployment
-
-The `Dockerfile` utilizes a 2-stage build pipeline, compiling the Go binary statically and serving it from a lightweight Alpine Linux image (~15MB total image size).
-
-```bash
-# Build multi-stage Docker image
-docker build -t ate-operations-go:latest .
-
-# Run container instance
-docker run -d -p 8080:8080 --name ate-go ate-operations-go:latest
-
-# Verify health status
-curl http://localhost:8080/health
-```
-
----
-
-## 🏗️ Infrastructure as Code (IaC) Guide
-
-### 1. Terraform / OpenTofu (`terraform/`)
-Provision container infrastructure declaratively:
+### 1. Terraform Infrastructure Provisioning
 ```bash
 cd terraform
 terraform init
 terraform apply -auto-approve
 ```
 
-### 2. Ansible Automation (`ansible/`)
-Execute host provisioning, image compilation, and automated health verification:
+### 2. Ansible Host Provisioning & App Wiring
 ```bash
 cd ansible
-ansible-playbook -i inventory.ini playbook.yml
+ansible-playbook -i inventory.ini site.yml
 ```
 
-### 3. Kubernetes Declarative Deployment (`k8s/`)
-Deploy 3-replica cluster pods with Horizontal Pod Autoscaling:
+### 3. Kubernetes Multi-Service Cluster Deployment
 ```bash
 kubectl apply -f k8s/
 ```
-
----
-
-## 🛠️ Makefile Command Reference
-
-| Target | Description |
-| :--- | :--- |
-| `make build` | Compile Go binary executable |
-| `make run` | Compile and start local server |
-| `make test` | Execute Go unit test suite |
-| `make docker-build` | Build multi-stage (~15MB) Docker container image |
-| `make tf-init` | Initialize Terraform environment |
-| `make tf-apply` | Apply Terraform infrastructure provisioning |
-| `make ansible-play` | Run Ansible deployment playbook |
-| `make k8s-apply` | Apply Kubernetes manifests to cluster |
-| `make clean` | Remove compiled binary executable |

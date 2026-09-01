@@ -1,23 +1,17 @@
-variable "app_name" {
+variable "aws_region" {
   type        = string
-  default     = "ate-operations-go"
-  description = "Name of the deployed container service"
+  default     = "us-east-1"
+  description = "AWS Deployment Region"
 }
 
-variable "internal_port" {
-  type        = number
-  default     = 8080
-  description = "Container internal application listening port"
-}
-
-variable "external_port" {
-  type        = number
-  default     = 8080
-  description = "Host external exposed port"
+variable "instance_type" {
+  type        = string
+  default     = "t3.micro"
+  description = "EC2 Instance Type (Free-tier eligible)"
 }
 
 variable "environment" {
   type        = string
   default     = "production"
-  description = "Deployment target environment (staging/production)"
+  description = "Deployment Environment"
 }

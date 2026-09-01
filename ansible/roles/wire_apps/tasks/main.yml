@@ -1,0 +1,22 @@
+---
+- name: Deploy and Wire Group Microservices
+  debug:
+    msg: "Wiring microservices in group: {{ registry_url }}"
+
+- name: Pull and Run Web Frontend Microservice
+  command: >
+    docker run -d --name web-frontend --restart unless-stopped
+    -p 3000:3000 {{ registry_url }}/web-frontend:latest
+  ignore_errors: yes
+
+- name: Pull and Run API Gateway Microservice
+  command: >
+    docker run -d --name api-gateway --restart unless-stopped
+    -p 8080:8080 {{ registry_url }}/api-gateway:latest
+  ignore_errors: yes
+
+- name: Pull and Run Auth Service Microservice
+  command: >
+    docker run -d --name auth-service --restart unless-stopped
+    -p 5000:5000 {{ registry_url }}/auth-service:latest
+  ignore_errors: yes

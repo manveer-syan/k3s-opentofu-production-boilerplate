@@ -1,0 +1,6 @@
+---
+- name: Orchestrate manveersyan-group Infrastructure & Wire Microservices
+  hosts: platform_hosts
+  roles:
+    - common
+    - wire_apps

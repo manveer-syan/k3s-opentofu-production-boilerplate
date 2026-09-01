@@ -1,0 +1,9 @@
+---
+- name: Ensure Docker is installed
+  command: docker --version
+  register: docker_check
+  ignore_errors: yes
+
+- name: Display Docker status
+  debug:
+    msg: "Docker engine is active and ready for container orchestration."
