@@ -1,6 +1,43 @@
-# Binary output
+# Compiled Binaries & Executables
 ate-app
+*.exe
+*.exe?
+*.dll
+*.so
+*.dylib
+bin/
+dist/
 
-# OS & Editor
+# Terraform Local State & Cache
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfstate.d/
+terraform/.terraform.lock.hcl
+terraform/crash.log
+
+# Environment & Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Operating System & Editor Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs & Temporary Files
 *.log
+*.tmp
+*.docx
+__pycache__/
+*.pyc
