@@ -1,21 +1,22 @@
-# ATE Operations Suite - Golang DevOps Makefile
+# ATE Operations Suite - Golang & IaC Makefile
 
 APP_NAME = ate-operations-go
 BINARY = ate-app
 PORT = 8080
 
-.PHONY: help build run test clean docker-build docker-run docker-stop healthcheck
+.PHONY: help build run test clean docker-build docker-run docker-stop tf-init tf-apply ansible-play k8s-apply
 
 help:
-	@echo "Available Go commands:"
-	@echo "  make build         Compile Go executable binary"
-	@echo "  make run           Run compiled Go application"
-	@echo "  make test          Execute Go unit tests"
-	@echo "  make docker-build  Build multi-stage Docker image (~15MB)"
-	@echo "  make docker-run    Run Docker container on port $(PORT)"
-	@echo "  make docker-stop   Stop running container"
-	@echo "  make healthcheck   Check /health REST API endpoint"
-	@echo "  make clean         Remove binary executable"
+	@echo "Available Go & IaC commands:"
+	@echo "  make build          Compile Go executable binary"
+	@echo "  make run            Run compiled Go application"
+	@echo "  make test           Execute Go unit tests"
+	@echo "  make docker-build   Build multi-stage Docker image"
+	@echo "  make tf-init        Initialize Terraform working directory"
+	@echo "  make tf-apply       Apply Terraform infrastructure provisioning"
+	@echo "  make ansible-play   Run Ansible automation playbook"
+	@echo "  make k8s-apply      Apply Kubernetes manifests to cluster"
+	@echo "  make clean          Remove binary executable"
 
 build:
 	go build -o $(BINARY) main.go
@@ -29,15 +30,17 @@ test:
 docker-build:
 	docker build -t $(APP_NAME):latest .
 
-docker-run:
-	docker run -d --name $(APP_NAME) -p $(PORT):8080 $(APP_NAME):latest
+tf-init:
+	cd terraform && terraform init
 
-docker-stop:
-	docker stop $(APP_NAME) || true
-	docker rm $(APP_NAME) || true
+tf-apply:
+	cd terraform && terraform apply -auto-approve
 
-healthcheck:
-	@curl -s -f http://localhost:$(PORT)/health || (echo "Healthcheck Failed!" && exit 1)
+ansible-play:
+	cd ansible && ansible-playbook -i inventory.ini playbook.yml
+
+k8s-apply:
+	kubectl apply -f k8s/
 
 clean:
 	rm -f $(BINARY)
