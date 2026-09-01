@@ -1,0 +1,68 @@
+stages:
+  - lint_and_test
+  - build
+  - docker_build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+
+# ----------------------------------------------------
+# Stage 1: Dependency Check & Build Test
+# ----------------------------------------------------
+test:
+  stage: lint_and_test
+  image: node:20-alpine
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+
+# ----------------------------------------------------
+# Stage 2: Production Assets Build
+# ----------------------------------------------------
+build_job:
+  stage: build
+  image: node:20-alpine
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+# ----------------------------------------------------
+# Stage 3: Docker Image Build & Container Registry Push
+# ----------------------------------------------------
+docker_build_job:
+  stage: docker_build
+  image: docker:24.0.5-dind
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker build -t $IMAGE_TAG .
+    - echo "Docker image built successfully: $IMAGE_TAG"
+    # To push to GitLab Container Registry when enabled:
+    # - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    # - docker push $IMAGE_TAG
+  only:
+    - main
+    - dev
+
+# ----------------------------------------------------
+# Stage 4: Staging / Dev Deployment
+# ----------------------------------------------------
+deploy_dev:
+  stage: deploy
+  script:
+    - echo "Deploying ATE Suite to Dev / Staging environment..."
+  environment:
+    name: development
+  only:
+    - dev
