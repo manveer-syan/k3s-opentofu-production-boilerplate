@@ -1,4 +1,4 @@
-# 📖 Runbook: Deploying a New Microservice
+# Runbook: Deploying a New Microservice
 
 **Target Audience**: Developers, Platform Engineers  
 **Scope**: Adding a new service (e.g. `payment-service` on port `7000`) to `manveersyan-group`
@@ -11,6 +11,7 @@
 
 ## Step 2: Add Multi-Stage Dockerfile
 Ensure your service repository contains a production multi-stage `Dockerfile`:
+
 ```dockerfile
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -30,6 +31,7 @@ CMD ["node", "dist/main.js"]
 
 ## Step 3: Include CI/CD Component Template
 In your application repository, create `.gitlab-ci.yml`:
+
 ```yaml
 include:
   - project: 'manveersyan-group/ate'
@@ -41,6 +43,7 @@ variables:
 
 ## Step 4: Register Service in `docker-compose.yml`
 In `manveersyan-group/ate` repo, edit `docker-compose/docker-compose.yml`:
+
 ```yaml
   payment-service:
     image: ${REGISTRY_URL}/payment-service:latest
@@ -56,6 +59,7 @@ In `manveersyan-group/ate` repo, edit `docker-compose/docker-compose.yml`:
 
 ## Step 5: Route Service in `nginx.conf`
 In `docker-compose/nginx/nginx.conf`, add upstream & location block:
+
 ```nginx
 upstream payment_service_upstream {
     server payment-service:7000;
@@ -69,6 +73,7 @@ location /payment/ {
 
 ## Step 6: Add Prometheus Scrape Target
 In `observability/prometheus/prometheus.yml`:
+
 ```yaml
   - job_name: 'payment-service'
     metrics_path: '/metrics'
@@ -77,4 +82,4 @@ In `observability/prometheus/prometheus.yml`:
 ```
 
 ## Step 7: Commit, Push & Deploy
-Commit and push to `main` branch. The automated pipeline will build the container, register metrics, update Nginx routing, and deploy!
+Commit and push to `main` branch. The automated pipeline will build the container, register metrics, update Nginx routing, and deploy automatically.

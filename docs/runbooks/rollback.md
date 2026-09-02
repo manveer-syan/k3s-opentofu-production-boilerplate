@@ -1,4 +1,4 @@
-# 📖 Runbook: Incident Rollback Procedures
+# Runbook: Incident Rollback Procedures
 
 **Scope**: Immediate emergency rollback for Application Services, Terraform State, or Database.
 

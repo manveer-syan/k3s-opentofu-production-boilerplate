@@ -1,11 +1,11 @@
-# 📖 Runbook: Disaster Recovery & Total System Reconstruction
+# Runbook: Disaster Recovery & System Reconstruction
 
 **RPO (Recovery Point Objective)**: 24 hours (Automated RDS daily backups & S3 lifecycle)  
 **RTO (Recovery Time Objective)**: 4 hours (Complete infrastructure recreation via Terraform)
 
 ---
 
-## 1. Scratch Infrastructure Recreation Procedure
+## 1. Infrastructure Recreation Procedure
 
 In the event of total AWS region outage or account disaster:
 
