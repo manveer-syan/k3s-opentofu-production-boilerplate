@@ -1,0 +1,34 @@
+# ==============================================================================
+# Development Local Overrides Configuration
+# Path: docker-compose/docker-compose.override.yml
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  web-frontend:
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    volumes:
+      - ../apps/web-frontend:/app:cached
+
+  api-gateway:
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    volumes:
+      - ../apps/api-gateway:/app:cached
+
+  auth-service:
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    volumes:
+      - ../apps/auth-service:/app:cached

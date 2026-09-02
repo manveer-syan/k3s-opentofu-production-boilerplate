@@ -1,0 +1,12 @@
+# ==============================================================================
+# Namespace Definition
+# Path: k8s/base/namespace.yaml
+# ==============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: manveersyan-group
+  labels:
+    app.kubernetes.io/part-of: manveersyan-platform
+    environment: production

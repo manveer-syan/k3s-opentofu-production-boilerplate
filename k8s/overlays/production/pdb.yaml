@@ -1,0 +1,32 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-frontend-pdb
+  namespace: manveersyan-group
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: web-frontend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: manveersyan-group
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: manveersyan-group
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: auth-service

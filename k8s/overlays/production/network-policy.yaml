@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: platform-network-policy
+  namespace: manveersyan-group
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/16 # VPC Subnet CIDR for RDS Access
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0 # Egress for external OAuth callbacks
+      ports:
+        - protocol: TCP
+          port: 443

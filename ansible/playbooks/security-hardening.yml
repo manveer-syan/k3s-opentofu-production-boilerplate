@@ -1,0 +1,74 @@
+---
+# ==============================================================================
+# Playbook: Host Security Hardening
+# Path: ansible/playbooks/security-hardening.yml
+# ==============================================================================
+
+- name: Apply Linux System Hardening & Security Policies
+  hosts: webservers
+  become: true
+
+  tasks:
+    - name: Update apt package cache & upgrade system packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+
+    - name: Install security packages (UFW, Fail2ban, Unattended-Upgrades)
+      apt:
+        name:
+          - ufw
+          - fail2ban
+          - unattended-upgrades
+        state: present
+
+    - name: Configure UFW default firewall policies
+      ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: 'incoming', policy: 'deny' }
+        - { direction: 'outgoing', policy: 'allow' }
+
+    - name: Allow UFW specific ports (SSH 22, HTTP 80, HTTPS 443)
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - '22'
+        - '80'
+        - '443'
+
+    - name: Enable UFW firewall
+      ufw:
+        state: enabled
+
+    - name: Disable root SSH login in sshd_config
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+      notify: Restart SSH
+
+    - name: Enable Fail2ban service
+      systemd:
+        name: fail2ban
+        state: started
+        enabled: yes
+
+    - name: Configure automatic security updates
+      copy:
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        mode: '0644'
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: sshd
+        state: restarted

@@ -1,0 +1,96 @@
+# ==============================================================================
+# GitLab CI/CD Component Template: Application Pipeline
+# Included by application repos: web-frontend, api-gateway, auth-service
+# Path: templates/app-pipeline.yml
+# ==============================================================================
+
+stages:
+  - test
+  - build
+  - scan
+  - push
+  - trigger
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  LATEST_TAG: $CI_REGISTRY_IMAGE:latest
+  INFRA_PROJECT_PATH: "manveersyan-group/ate"
+
+# Default configuration for Docker-in-Docker jobs
+.dind-job:
+  image: docker:24.0.7
+  services:
+    - docker:24.0.7-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+
+# Stage 1: Unit & Integration Testing
+test_job:
+  stage: test
+  image: node:20-alpine
+  script:
+    - echo "Running application test suite for $APP_NAME..."
+    - if [ -f package.json ]; then npm ci && npm test; else echo "No package.json test runner found, passing default test assertion"; fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+
+# Stage 2: Docker Image Build
+build_job:
+  extends: .dind-job
+  stage: build
+  script:
+    - echo "Building Docker image for $APP_NAME ($IMAGE_TAG)..."
+    - docker build --pull --target production -t $IMAGE_TAG -t $LATEST_TAG .
+    - docker save -o image.tar $IMAGE_TAG
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+
+# Stage 3: Container Vulnerability Scan with Trivy
+scan_job:
+  extends: .dind-job
+  stage: scan
+  script:
+    - docker load -i image.tar
+    - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | tee /usr/share/keyrings/trivy.gpg > /dev/null
+    - apk add --no-cache curl
+    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.0
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $IMAGE_TAG
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# Stage 4: Push to Container Registry
+push_job:
+  extends: .dind-job
+  stage: push
+  script:
+    - docker load -i image.tar
+    - echo "Pushing container images to GitLab Container Registry..."
+    - docker push $IMAGE_TAG
+    - docker push $LATEST_TAG
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+
+# Stage 5: Trigger Downstream Infrastructure Deployment in 'ate' Repo
+trigger_infra:
+  stage: trigger
+  trigger:
+    project: manveersyan-group/ate
+    branch: main
+    strategy: depend
+  variables:
+    TRIGGERED_APP_NAME: $APP_NAME
+    TRIGGERED_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"

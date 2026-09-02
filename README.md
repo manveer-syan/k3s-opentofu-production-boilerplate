@@ -1,109 +1,129 @@
-# 🌐 Central Infrastructure & Platform Engineering Repository
+# 🚀 Central Infrastructure & GitOps Platform
 
-![GitLab Group](https://img.shields.io/badge/GitLab_Group-manveersyan--group-FC6D26?style=flat-square&logo=gitlab)
-![Terraform](https://img.shields.io/badge/IaC-Terraform_Modular-7B42BC?style=flat-square&logo=terraform)
-![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes_Group_Cluster-326CE5?style=flat-square&logo=kubernetes)
-![Ansible](https://img.shields.io/badge/Automation-Ansible_Roles-EE0000?style=flat-square&logo=ansible)
+[![GitLab CI](https://img.shields.io/badge/GitLab_CI-Pipeline-FC6D26?style=flat-square&logo=gitlab)](https://gitlab.com/manveersyan-group/ate)
+[![Terraform](https://img.shields.io/badge/IaC-Terraform_1.5+-7B42BC?style=flat-square&logo=terraform)](https://www.terraform.io/)
+[![Docker Compose](https://img.shields.io/badge/Orchestration-Docker_Compose-2496ED?style=flat-square&logo=docker)](https://docs.docker.com/compose/)
+[![Ansible](https://img.shields.io/badge/Automation-Ansible-EE0000?style=flat-square&logo=ansible)](https://www.ansible.com/)
+[![AWS](https://img.shields.io/badge/Cloud-AWS_us--east--1-232F3E?style=flat-square&logo=amazon-aws)](https://aws.amazon.com/)
 
-This repository (`manveersyan-group/ate`) serves as the **Central Infrastructure & Platform Engineering Control Center** for the **`manveersyan-group`** on GitLab.
-
-It contains no application source code. Instead, it provides the modular **Infrastructure as Code (IaC)**, **Ansible Playbooks**, **Kubernetes Cluster Manifests**, and **GitLab CI Multi-Project Pipelines** to provision, wire, and orchestrate all microservices in the `manveersyan-group` (e.g. `web-frontend`, `api-gateway`, `auth-service`).
-
----
-
-## 📐 Group Infrastructure Architecture
-
-```
-+---------------------------------------------------------------------------------+
-|                       GITLAB GROUP: manveersyan-group                            |
-|                                                                                 |
-|  +--------------------+    +--------------------+    +-----------------------+  |
-|  |    web-frontend    |    |    api-gateway     |    |     auth-service      |  |
-|  | (GitLab Repo #1)   |    | (GitLab Repo #2)   |    |  (GitLab Repo #3)     |  |
-|  +--------------------+    +--------------------+    +-----------------------+  |
-|            |                        |                        |                  |
-|            +------------------------+------------------------+                  |
-|                                     |                                           |
-|                                     v (Pushes Container Images)                 |
-|                   +------------------------------------+                        |
-|                   |   GitLab Group Container Registry  |                        |
-|                   | (registry.gitlab.com/manveersyan-g)|                        |
-|                   +------------------------------------+                        |
-+---------------------------------------------------------------------------------+
-                                      |
-                                      | (Wired & Provisioned By)
-                                      v
-+---------------------------------------------------------------------------------+
-|              THIS REPO: manveersyan-group/ate (Central Infrastructure)          |
-|                                                                                 |
-|   +-------------------+    +--------------------+    +----------------------+   |
-|   |  Terraform Modules|    |  Ansible Playbooks |    | Kubernetes Manifests |   |
-|   | (EC2 / SG / EIP)  |    | (Host Provisioning)|    | (Ingress / Services) |   |
-|   +-------------------+    +--------------------+    +----------------------+   |
-+---------------------------------------------------------------------------------+
-```
+This repository (`manveersyan-group/ate`) serves as the **Central Platform Engineering & GitOps Repository** for the **`manveersyan-group`** organization on GitLab.
 
 ---
 
-## 📂 Repository Directory Layout
+## 📐 Architecture & Traffic Flow
 
-```
-ATE/
-├── README.md               # Central Platform Architecture & Wiring Guide
-├── INFRASTRUCTURE_PLAN.md  # Multi-App GitLab Group Orchestration Plan
-├── Makefile                # Unified Infra operational targets
-├── .gitlab-ci.yml          # Central Multi-Project Pipeline Runner
-├── .gitignore              # Infra state & secret exclusions
-├── terraform/              # Modular Infrastructure as Code (AWS/Docker)
-│   ├── main.tf             # Central orchestration wiring group microservices
-│   ├── variables.tf        # Shared group environment variables
-│   ├── outputs.tf          # Group microservice URLs & Elastic IP output
-│   └── modules/
-│       ├── app_service/    # Reusable Microservice App Module
-│       └── networking/     # Shared Security Group & Firewall Module
-├── ansible/                # Configuration Management & Multi-App Wiring
-│   ├── inventory.ini       # Platform host inventory
-│   ├── site.yml            # Main playbook
-│   └── roles/
-│       ├── common/         # Host preparation & Docker setup
-│       └── wire_apps/      # Wire group containers together
-└── k8s/                    # Enterprise Kubernetes Manifests
-    ├── 00-namespace.yaml   # Dedicated manveersyan-group namespace
-    ├── 01-ingress.yaml     # Group Ingress Router (path-based routing)
-    └── apps/               # Declarative microservice manifests
-        ├── web-frontend.yaml
-        ├── api-gateway.yaml
-        └── auth-service.yaml
+```mermaid
+flowchart TD
+    subgraph Clients["Clients & Developers"]
+        User["🌐 Web Users / Browsers"]
+        Dev["👨‍💻 Developers"]
+    end
+
+    subgraph GitLab["GitLab.com Organization"]
+        AppRepo["📦 App Repositories\n(web-frontend, api-gateway, auth-service)"]
+        InfraRepo["🛠️ Infra Repo (ate)\nGitLab CI/CD Pipeline"]
+        Registry["📦 Container Registry\nregistry.gitlab.com/manveersyan-group"]
+    end
+
+    subgraph AWS["AWS Cloud Infrastructure (us-east-1)"]
+        IGW["🌐 Internet Gateway"]
+        EIP["📍 Public Elastic IP"]
+        
+        subgraph EC2Host["EC2 Instance (t3.medium)"]
+            Nginx["🔀 Nginx Reverse Proxy\n(Port 80/443)"]
+            
+            subgraph Compose["Docker Compose Container Network"]
+                Frontend["💻 web-frontend:3000"]
+                Gateway["⚡ api-gateway:8080"]
+                Auth["🔐 auth-service:5000"]
+            end
+
+            subgraph Monitoring["Observability Stack"]
+                Prometheus["📊 Prometheus:9090"]
+                Grafana["📈 Grafana:3001"]
+            end
+        end
+
+        subgraph PrivateSubnet["Private Subnet"]
+          RDS[("🐘 RDS PostgreSQL\n(db.t3.micro)")]
+          S3[("🪣 S3 Logs Bucket")]
+        end
+    end
+
+    User -->|HTTP/HTTPS| EIP --> Nginx
+    Dev -->|Push Code| AppRepo -->|Build & Push Image| Registry
+    AppRepo -->|Trigger Downstream Pipeline| InfraRepo -->|Terraform / Ansible| EC2Host
+    Nginx -->|/| Frontend
+    Nginx -->|/api/| Gateway
+    Nginx -->|/auth/| Auth
+    Gateway -->|Database Query| RDS
+    Auth -->|Database Query| RDS
+    Monitoring -->|Scrape Metrics| Compose
 ```
 
 ---
 
-## 🛠️ Group Microservices Integration Matrix
+## 🛠️ Prerequisites
 
-| Microservice | Container Port | Exposed Host Port | Subdomain / Ingress Path |
-| :--- | :--- | :--- | :--- |
-| **`web-frontend`** | `3000` | `3000` | `app.manveersyan.com/` |
-| **`api-gateway`** | `8080` | `8080` | `app.manveersyan.com/api` |
-| **`auth-service`** | `5000` | `5000` | `app.manveersyan.com/auth` |
+- **Terraform**: `>= 1.5.0`
+- **AWS CLI**: `v2.x` configured with `us-east-1`
+- **Docker & Docker Compose**: `v24.0+`
+- **Git**: `>= 2.30`
 
 ---
 
-## 🚀 Provisioning & Wiring Commands
+## 🚀 Quick Start Guide
 
-### 1. Terraform Infrastructure Provisioning
+### 1. Configure AWS Environment Variables
 ```bash
-cd terraform
+export AWS_ACCESS_KEY_ID="your_aws_access_key"
+export AWS_SECRET_ACCESS_KEY="your_aws_secret_key"
+export AWS_DEFAULT_REGION="us-east-1"
+```
+
+### 2. Provision Production Infrastructure
+```bash
+cd terraform/environments/production
 terraform init
 terraform apply -auto-approve
 ```
 
-### 2. Ansible Host Provisioning & App Wiring
+### 3. Deploy Application Containers via Docker Compose
 ```bash
-cd ansible
-ansible-playbook -i inventory.ini site.yml
+cd ../../../docker-compose
+cp .env.example .env
+./deploy.sh
 ```
 
-### 3. Kubernetes Multi-Service Cluster Deployment
-```bash
-kubectl apply -f k8s/
-```
+---
+
+## 🔑 Required Environment Variables
+
+| Variable | Description | Example / Default |
+| :--- | :--- | :--- |
+| `REGISTRY_URL` | Container registry domain | `registry.gitlab.com/manveersyan-group` |
+| `DATABASE_HOST` | RDS PostgreSQL endpoint | `manveersyan-prod-db.xxx.us-east-1.rds.amazonaws.com` |
+| `DATABASE_NAME` | Primary database name | `appdb` |
+| `DATABASE_USER` | Primary database user | `produser` |
+| `DATABASE_PASSWORD` | Primary database password | `[Masked Secret]` |
+| `JWT_SECRET` | 32-byte JWT secret | `[Masked Secret]` |
+
+---
+
+## 💳 Optimized Cost Breakdown (<$150/mo)
+
+| Resource | Dev | Staging | Production | Monthly Cost |
+| :--- | :--- | :--- | :--- | :--- |
+| **EC2 Instance** | `t3.micro` ($8.50) | Shared | `t3.medium` ($30.00) | **$38.50** |
+| **Elastic IP** | Free | Free | Free | **$0.00** |
+| **NAT Gateway** | Public Subnet Only | Public Subnet Only | Single NAT Gateway ($32.00) | **$32.00** |
+| **RDS Database** | `db.t3.micro` ($15.00) | Shared | `db.t3.micro` ($15.00) | **$30.00** |
+| **S3 Storage** | ~1 GB ($0.02) | ~1 GB ($0.02) | ~1 GB ($0.02) | **$0.06** |
+| **Data Transfer** | ~$5.00 | ~$5.00 | ~$10.00 | **$20.00** |
+| **TOTAL** | | | | **~$120.56 / month** |
+
+---
+
+## 👥 Team Ownership
+- **Lead Platform Engineer**: Manveer Singh (`manveersyan-group`)
+- **Repository**: [`manveersyan-group/ate`](https://gitlab.com/manveersyan-group/ate)

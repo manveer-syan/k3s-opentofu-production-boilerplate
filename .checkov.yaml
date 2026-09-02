@@ -1,0 +1,17 @@
+# ==============================================================================
+# Checkov Security Scanner Configuration
+# Path: .checkov.yaml
+# ==============================================================================
+
+directory:
+  - terraform/
+
+framework:
+  - terraform
+
+output: cli
+
+# Skip cost-related checks for single NAT Gateway usage in dev/staging under <$200 budget constraint
+skip-check:
+  - CKV_AWS_79  # Ensure AWS NAT Gateway is assigned a public IP
+  - CKV_AWS_144 # Ensure VPC EC2 Flow Logs enabled

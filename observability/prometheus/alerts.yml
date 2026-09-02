@@ -1,0 +1,52 @@
+# ==============================================================================
+# Prometheus Alerting Rules
+# Path: observability/prometheus/alerts.yml
+# ==============================================================================
+
+groups:
+  - name: platform_alerts
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target Instance {{ $labels.instance }} Down"
+          description: "{{ $labels.job }} has been unresponsive for more than 5 minutes."
+
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes > 209715200 # 200MB
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Memory Consumption on {{ $labels.container_name }}"
+          description: "Container memory consumption exceeded 200MB threshold."
+
+      - alert: HighCpuUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU Utilization on {{ $labels.container_name }}"
+          description: "Container CPU consumption exceeded 80% capacity for 5 minutes."
+
+      - alert: Http5xxErrors
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx Error Rate detected on {{ $labels.job }}"
+          description: "HTTP 5xx server errors rate > 1% over 5-minute window."
+
+      - alert: ServiceUnhealthy
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service Unhealthy Probe Failure on {{ $labels.instance }}"
+          description: "Blackbox probe health check failed for 2 consecutive minutes."

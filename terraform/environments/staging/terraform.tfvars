@@ -1,0 +1,13 @@
+project_name       = "manveersyan"
+environment        = "staging"
+region             = "us-east-1"
+vpc_cidr           = "10.2.0.0/16"
+azs                = ["us-east-1a", "us-east-1b"]
+public_subnets     = ["10.2.1.0/24", "10.2.2.0/24"]
+private_subnets    = ["10.2.10.0/24", "10.2.11.0/24"]
+allowed_ssh_cidr   = "0.0.0.0/0"
+ec2_instance_type  = "t3.small"
+rds_instance_class = "db.t3.small"
+rds_username       = "staginguser"
+rds_password       = "StagingSecretPassword123!"
+enable_monitoring  = true

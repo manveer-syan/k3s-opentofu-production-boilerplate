@@ -1,0 +1,13 @@
+project_name       = "manveersyan"
+environment        = "dev"
+region             = "us-east-1"
+vpc_cidr           = "10.1.0.0/16"
+azs                = ["us-east-1a", "us-east-1b"]
+public_subnets     = ["10.1.1.0/24", "10.1.2.0/24"]
+private_subnets    = ["10.1.10.0/24", "10.1.11.0/24"]
+allowed_ssh_cidr   = "0.0.0.0/0"
+ec2_instance_type  = "t3.micro"
+rds_instance_class = "db.t3.micro"
+rds_username       = "devuser"
+rds_password       = "DevSecretPassword123!"
+enable_monitoring  = false
