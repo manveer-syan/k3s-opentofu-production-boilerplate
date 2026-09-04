@@ -86,7 +86,7 @@ deploy_to_k3s:
     - ssh-add ~/.ssh/id_ed25519
   script:
     - echo "Deploying updated manifests to production K3s cluster..."
-    - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "cd /opt/apps/projectATE/ate && kubectl apply -k k8s/overlays/production && kubectl rollout restart deployment -n manveersyan-group"
+    - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "cd /opt/apps/projectATE/ate && git fetch origin && git checkout dev && git pull origin dev && kubectl apply -k k8s/overlays/production && kubectl rollout restart deployment -n manveersyan-group"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "dev"
