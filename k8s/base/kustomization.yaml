@@ -13,4 +13,7 @@ resources:
   - auth-service/deployment.yaml
   - auth-service/service.yaml
   - auth-service/hpa.yaml
+  - notification-service/deployment.yaml
+  - notification-service/service.yaml
+  - notification-service/hpa.yaml
   - ingress/ingress.yaml

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service-svc
+  namespace: manveersyan-group
+  labels:
+    app.kubernetes.io/name: notification-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 7000
+      name: http
+  selector:
+    app: notification-service

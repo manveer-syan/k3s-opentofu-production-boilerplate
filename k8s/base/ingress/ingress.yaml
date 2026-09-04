@@ -15,6 +15,13 @@ spec:
                 name: api-gateway-svc
                 port:
                   number: 80
+          - path: /notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service-svc
+                port:
+                  number: 80
           - path: /auth
             pathType: Prefix
             backend:
