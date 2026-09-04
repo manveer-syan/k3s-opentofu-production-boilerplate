@@ -1,15 +1,15 @@
 # Runbook: Deploying a New Microservice
 
 **Target Audience**: Developers, Platform Engineers  
-**Scope**: Adding a new service (e.g. `payment-service` on port `7000`) to `manveersyan-group`
+**Scope**: Adding a new service (e.g. `notification-service` on port `7000`) to `manveersyan-group`
 
 ---
 
 ## Step 1: Create Repository in GitLab Group
-1. In GitLab UI, navigate to `manveersyan-group` ➔ **New Project** ➔ `payment-service`.
+1. In GitLab UI, navigate to `manveersyan-group` ➔ **New Project** ➔ `notification-service`.
 2. Push your initial codebase.
 
-## Step 2: Add Multi-Stage Dockerfile
+## Step 2: Add Production Multi-Stage Dockerfile
 Ensure your service repository contains a production multi-stage `Dockerfile`:
 
 ```dockerfile
@@ -29,57 +29,66 @@ EXPOSE 7000
 CMD ["node", "dist/main.js"]
 ```
 
-## Step 3: Include CI/CD Component Template
-In your application repository, create `.gitlab-ci.yml`:
-
+## Step 3: Create K3s Kubernetes Manifests (`k8s/base/`)
+1. Create `k8s/base/notification-service/deployment.yaml`:
 ```yaml
-include:
-  - project: 'manveersyan-group/ate'
-    file: 'templates/app-pipeline.yml'
-
-variables:
-  APP_NAME: "payment-service"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: manveersyan-group
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: registry.gitlab.com/manveersyan-group/notification-service:latest
+          ports:
+            - containerPort: 7000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 7000
 ```
 
-## Step 4: Register Service in `docker-compose.yml`
-In `manveersyan-group/ate` repo, edit `docker-compose/docker-compose.yml`:
+2. Add resource entry to `k8s/base/kustomization.yaml`:
+```yaml
+resources:
+  - notification-service/deployment.yaml
+  - notification-service/service.yaml
+```
+
+3. Route endpoint in `k8s/base/ingress/ingress.yaml`:
+```yaml
+- path: /notification
+  pathType: Prefix
+  backend:
+    service:
+      name: notification-service-svc
+      port:
+        number: 80
+```
+
+## Step 4: Add Local Development Entry (`docker-compose/`)
+In `docker-compose/docker-compose.yml`, add the local development service definition:
 
 ```yaml
-  payment-service:
-    image: ${REGISTRY_URL}/payment-service:latest
-    container_name: app-payment-service
+  notification-service:
+    image: ${REGISTRY_URL}/notification-service:latest
+    container_name: app-notification-service
     restart: always
-    expose:
-      - "7000"
-    env_file:
-      - .env
+    ports:
+      - "7000:7000"
     networks:
       - app-network
 ```
 
-## Step 5: Route Service in `nginx.conf`
-In `docker-compose/nginx/nginx.conf`, add upstream & location block:
-
-```nginx
-upstream payment_service_upstream {
-    server payment-service:7000;
-}
-
-location /payment/ {
-    rewrite ^/payment/(.*)$ /$1 break;
-    proxy_pass http://payment_service_upstream;
-}
-```
-
-## Step 6: Add Prometheus Scrape Target
-In `observability/prometheus/prometheus.yml`:
-
-```yaml
-  - job_name: 'payment-service'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['payment-service:7000']
-```
-
-## Step 7: Commit, Push & Deploy
-Commit and push to `main` branch. The automated pipeline will build the container, register metrics, update Nginx routing, and deploy automatically.
+## Step 5: Commit & Deploy via GitLab CI
+Commit and push to `dev`. The automated pipeline will run Trivy validation scans and deploy the new service to K3s automatically!

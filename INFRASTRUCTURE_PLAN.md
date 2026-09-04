@@ -1,9 +1,9 @@
-# 📄 Central Infrastructure & Multi-App Wiring Plan
+# Central Infrastructure & Multi-App Wiring Plan
 
 **GitLab Group**: [`manveersyan-group`](https://gitlab.com/manveersyan-group)  
-**Infrastructure Repository**: [`manveersyan-group/ate`](https://gitlab.com/manveersyan-group/ate/-/tree/dev)  
+**Infrastructure Repository**: [`manveersyan-group/ate`](https://gitlab.com/manveersyan-group/ate)  
 **Document Target**: Central Multi-Service Infrastructure & Platform Engineering  
-**Orchestration Stack**: Modular Terraform, Ansible Roles, Kubernetes Ingress/Manifests, GitLab CI Multi-Project Pipeline
+**Orchestration Stack**: OpenTofu, K3s Kubernetes Kustomize, Ansible Roles, GitLab CI GitOps Pipeline  
 
 ---
 
@@ -14,41 +14,42 @@ This repository operates as the **Single Source of Truth for Platform Infrastruc
 Application repositories (e.g. `web-frontend`, `api-gateway`, `auth-service`) focus strictly on feature development, building container images, and pushing them to the **GitLab Container Registry**:
 `registry.gitlab.com/manveersyan-group/<service-name>:latest`
 
-This repository manages the underlying cloud infrastructure (AWS EC2, Elastic IP, Security Groups), network routing, container orchestration, and wiring of all microservices into a unified platform.
+This repository manages the underlying cloud infrastructure (AWS EC2, Elastic IP, Security Groups, S3, RDS), network routing via Traefik Ingress, container orchestration via K3s, and security hardening.
 
 ---
 
 ## 2. Infrastructure Layer Breakdown
 
-### A. Modular Terraform Infrastructure (`terraform/`)
-- **[modules/networking/](file:///Users/manveersingh/ATE/terraform/modules/networking)**: Shared AWS Security Group opening Ports `80` (HTTP), `443` (HTTPS), `3000` (Web Frontend), `8080` (API Gateway), `5000` (Auth Service), and `22` (SSH).
-- **[modules/app_service/](file:///Users/manveersingh/ATE/terraform/modules/app_service)**: Generic microservice container module pulling images from the GitLab Container Registry.
-- **[main.tf](file:///Users/manveersingh/ATE/terraform/main.tf)**: Central orchestration file instantiating networking and wiring all group microservices.
+### A. Modular OpenTofu Infrastructure (`terraform/`)
+- **`modules/ec2`**: AWS EC2 instance profile (`t3.small`) with 2GB Swap space and AWS SSM Session Manager integration (`AmazonSSMManagedInstanceCore`).
+- **`modules/iam`**: IAM roles and policy attachments for SSM, CloudWatch, and S3 access.
+- **`modules/rds`**: Managed AWS RDS PostgreSQL instance in private VPC subnets.
+- **`modules/s3`**: Encrypted log storage bucket with lifecycle retention rules and public access block.
+- **`modules/security_groups`**: Stateful firewall security groups for EC2 host and RDS database.
+- **`modules/vpc`**: Multi-AZ VPC network subnets, route tables, and Internet Gateway.
 
-### B. Ansible Roles & Configuration Management (`ansible/`)
-- **[roles/common/](file:///Users/manveersingh/ATE/ansible/roles/common)**: Server preparation, security hardening, and Docker engine installation.
-- **[roles/wire_apps/](file:///Users/manveersingh/ATE/ansible/roles/wire_apps)**: Pulls and wires container images for `web-frontend`, `api-gateway`, and `auth-service`.
-- **[site.yml](file:///Users/manveersingh/ATE/ansible/site.yml)**: Master playbook orchestrating host configuration.
+### B. Ansible System Hardening & Configuration (`ansible/`)
+- **`roles/common/`**: System update, security hardening, Docker engine, and K3s prerequisites setup.
+- **`site.yml`**: Master playbook orchestrating host configuration.
 
-### C. Enterprise Kubernetes Orchestration (`k8s/`)
-- **[00-namespace.yaml](file:///Users/manveersingh/ATE/k8s/00-namespace.yaml)**: Dedicated `manveersyan-group` cluster namespace.
-- **[01-ingress.yaml](file:///Users/manveersingh/ATE/k8s/01-ingress.yaml)**: Ingress routing specs wiring sub-paths (`/`, `/api`, `/auth`) to their corresponding service pods.
-- **[apps/](file:///Users/manveersingh/ATE/k8s/apps)**: Declarative deployments and service definitions for `web-frontend.yaml`, `api-gateway.yaml`, and `auth-service.yaml`.
+### C. Enterprise K3s Kubernetes Orchestration (`k8s/`)
+- **`base/`**: Core Kubernetes resource manifests (`namespace.yaml`, `secret.yaml`, `ingress.yaml`, and service/deployment definitions for `web-frontend`, `api-gateway`, `auth-service`).
+- **`overlays/production/`**: Production-specific Kustomize configuration (`pdb.yaml`, `network-policy.yaml`, replica scaling).
 
 ---
 
 ## 3. Step-by-Step Deployment Commands
 
 ```bash
-# 1. Provision Infrastructure & Wire Group Apps via Terraform
-cd terraform
-terraform init
-terraform apply -auto-approve
+# 1. Provision Cloud Infrastructure via OpenTofu
+cd terraform/environments/production
+tofu init
+tofu apply -auto-approve
 
-# 2. Configure Host & Wire Containers via Ansible
-cd ansible
-ansible-playbook -i inventory.ini site.yml
+# 2. Configure Host System via Ansible
+cd ../../../ansible
+ansible-playbook -i inventory/hosts.ini site.yml
 
-# 3. Apply Multi-Service Kubernetes Manifests
-kubectl apply -f k8s/
+# 3. Roll Out Production Kubernetes Manifests to K3s Cluster
+kubectl apply -k k8s/overlays/production
 ```

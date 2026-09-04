@@ -1,31 +1,35 @@
 # Runbook: Disaster Recovery & System Reconstruction
 
 **RPO (Recovery Point Objective)**: 24 hours (Automated RDS daily backups & S3 lifecycle)  
-**RTO (Recovery Time Objective)**: 4 hours (Complete infrastructure recreation via Terraform)
+**RTO (Recovery Time Objective)**: 30 minutes (Complete infrastructure & K3s cluster recreation via OpenTofu)
 
 ---
 
-## 1. Infrastructure Recreation Procedure
+## 1. Infrastructure Reconstruction Procedure
 
-In the event of total AWS region outage or account disaster:
+In the event of total EC2 server loss or AWS instance disaster:
 
 1. **Clone Infrastructure Repository**:
    ```bash
-   git clone git@gitlab.com:manveersyan-group/ate.git
+   git clone https://gitlab.com/manveersyan-group/ate.git
    cd ate
    ```
 
-2. **Re-initialize S3 State Backend & Deploy Infrastructure**:
+2. **Re-initialize OpenTofu State & Deploy Infrastructure**:
    ```bash
    cd terraform/environments/production
-   terraform init
-   terraform apply -auto-approve
+   tofu init
+   tofu apply -auto-approve
    ```
 
-3. **Deploy Application Layer**:
+3. **Re-apply K3s Kubernetes Manifests**:
    ```bash
-   cd ../../../ansible
-   ansible-playbook -i inventory/hosts.ini playbooks/update-apps.yml
+   kubectl apply -k k8s/overlays/production
+   ```
+
+4. **Verify Application Health**:
+   ```bash
+   curl -i http://34.198.184.122/health
    ```
 
 ---

@@ -1,38 +1,36 @@
 # Runbook: Incident Rollback Procedures
 
-**Scope**: Immediate emergency rollback for Application Services, Terraform State, or Database.
+**Scope**: Immediate emergency rollback for Application Services (K3s), OpenTofu Infrastructure, or Database.
 
 ---
 
-## 1. Application Container Rollback (Docker Compose)
+## 1. Kubernetes Application Rollback (K3s)
 
-If a newly deployed container image introduces runtime errors:
+If a newly deployed container image introduces runtime errors in production:
 
-1. **SSH into the EC2 Server**:
+1. **Instant Rollback via `kubectl`**:
    ```bash
-   ssh ubuntu@<EC2_PUBLIC_IP>
-   cd /opt/apps
+   # Rollback specific deployment to previous revision
+   kubectl rollout undo deployment/web-frontend -n manveersyan-group
+   kubectl rollout undo deployment/api-gateway -n manveersyan-group
+   kubectl rollout undo deployment/auth-service -n manveersyan-group
    ```
 
-2. **Pull and Deploy Previous Tag**:
+2. **Check Rollback Status**:
    ```bash
-   # Pin specific short SHA commit tag
-   docker compose pull registry.gitlab.com/manveersyan-group/api-gateway:abc1234
-   
-   # Force service replacement
-   docker compose up -d --no-deps api-gateway
+   kubectl rollout status deployment/web-frontend -n manveersyan-group
    ```
 
 3. **Verify Service Health**:
    ```bash
-   curl http://localhost/health
+   curl -i http://34.198.184.122/health
    ```
 
 ---
 
-## 2. Terraform Infrastructure Rollback
+## 2. OpenTofu Infrastructure Rollback
 
-If a Terraform apply broke networking or server instances:
+If an OpenTofu apply broke networking or cloud resources:
 
 1. **Revert Git Commit**:
    ```bash
@@ -42,13 +40,13 @@ If a Terraform apply broke networking or server instances:
 2. **Re-apply Previous Infrastructure State**:
    ```bash
    cd terraform/environments/production
-   terraform init
-   terraform apply -auto-approve
+   tofu init
+   tofu apply -auto-approve
    ```
 
 ---
 
-## 3. Database Restoration Rollback
+## 3. RDS Database Restoration
 
 If database corruption occurs:
 
