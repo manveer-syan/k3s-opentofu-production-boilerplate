@@ -17,7 +17,9 @@ variables:
 # ------------------------------------------------------------------------------
 validate_iac:
   stage: validate
-  image: ghcr.io/opentofu/opentofu:1.6.2
+  image:
+    name: ghcr.io/opentofu/opentofu:1.6.2
+    entrypoint: [""]
   script:
     - cd terraform/environments/production
     - tofu init -backend=false
@@ -25,7 +27,9 @@ validate_iac:
 
 validate_k8s_manifests:
   stage: validate
-  image: bitnami/kubectl:latest
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
   script:
     - kubectl kustomize k8s/overlays/production > /dev/null
     - echo "Kubernetes manifests validation successful."
@@ -42,7 +46,9 @@ validate_ansible:
 # ------------------------------------------------------------------------------
 plan_infrastructure:
   stage: plan
-  image: ghcr.io/opentofu/opentofu:1.6.2
+  image:
+    name: ghcr.io/opentofu/opentofu:1.6.2
+    entrypoint: [""]
   script:
     - cd terraform/environments/production
     - tofu init
@@ -50,19 +56,24 @@ plan_infrastructure:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 # ------------------------------------------------------------------------------
 # Stage 3: Automated Kubernetes Rollout to K3s Cluster
 # ------------------------------------------------------------------------------
 deploy_to_k3s:
   stage: deploy
-  image: bitnami/kubectl:latest
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
   before_script:
+    - apt-get update && apt-get install -y openssh-client git || true
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
   script:
     - echo "Deploying updated manifests to production K3s cluster..."
-    - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "cd /opt/apps/projectATE/ate && git pull && kubectl apply -k k8s/overlays/production && kubectl rollout restart deployment -n manveersyan-group"
+    - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "cd /opt/apps/projectATE/ate && kubectl apply -k k8s/overlays/production && kubectl rollout restart deployment -n manveersyan-group"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "dev"
