@@ -12,7 +12,11 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: kube-system
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
+        - podSelector: {}
   egress:
     - to:
         - ipBlock:
@@ -22,7 +26,11 @@ spec:
           port: 5432
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0 # Egress for external OAuth callbacks
+            cidr: 0.0.0.0/0 # Egress for external API / OAuth callbacks / DNS
       ports:
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 80
+        - protocol: UDP
+          port: 53
