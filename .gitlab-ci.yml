@@ -65,13 +65,15 @@ deploy_to_k3s:
   stage: deploy
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client
+    - apk add --no-cache openssh-client bash
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - |
       if [ -f "$SSH_PRIVATE_KEY" ]; then
         cp "$SSH_PRIVATE_KEY" ~/.ssh/id_ed25519
+      elif echo "$SSH_PRIVATE_KEY" | base64 -d 2>/dev/null | grep -q "PRIVATE KEY"; then
+        echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_ed25519
       else
-        printf "%s\n" "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+        printf "%s\n" "$SSH_PRIVATE_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
       fi
     - chmod 600 ~/.ssh/id_ed25519
     - eval $(ssh-agent -s)
