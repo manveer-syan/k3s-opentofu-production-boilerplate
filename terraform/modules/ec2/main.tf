@@ -26,6 +26,11 @@ resource "aws_instance" "server" {
   vpc_security_group_ids = [var.security_group_id]
   iam_instance_profile   = var.iam_instance_profile
 
+  root_block_device {
+    encrypted   = true
+    volume_type = "gp3"
+  }
+
   # Enforce IMDSv2 for enhanced security
   metadata_options {
     http_endpoint               = "enabled"
