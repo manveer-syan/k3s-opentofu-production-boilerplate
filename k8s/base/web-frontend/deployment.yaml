@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: web-frontend
   namespace: manveersyan-group
+  annotations:
+    deployment.kubernetes.io/revision-description: "Release v1.1 - Production K3s Rollout"
   labels:
     app.kubernetes.io/name: web-frontend
     app.kubernetes.io/part-of: manveersyan-platform
