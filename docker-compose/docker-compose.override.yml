@@ -7,28 +7,17 @@ version: '3.8'
 
 services:
   web-frontend:
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - DEBUG=true
-    volumes:
-      - ../apps/web-frontend:/app:cached
+    expose:
+      - "3000"
 
   api-gateway:
-    ports:
-      - "8080:8080"
-    environment:
-      - NODE_ENV=development
-      - DEBUG=true
-    volumes:
-      - ../apps/api-gateway:/app:cached
+    expose:
+      - "8080"
 
   auth-service:
-    ports:
-      - "5000:5000"
-    environment:
-      - NODE_ENV=development
-      - DEBUG=true
-    volumes:
-      - ../apps/auth-service:/app:cached
+    expose:
+      - "5000"
+
+  notification-service:
+    expose:
+      - "7000"

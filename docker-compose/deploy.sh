@@ -10,31 +10,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "=================================================="
-echo "🚀 Initiating Zero-Downtime Deployment: $(date)"
+echo "  Initiating Zero-Downtime Deployment: $(date)"
 echo "=================================================="
 
 # Check for .env file existence
 if [ ! -f .env ]; then
-    echo "❌ Error: .env file not found in $SCRIPT_DIR"
+    echo "Error: .env file not found in $SCRIPT_DIR"
     exit 1
 fi
 
 source .env
 
 # Log into GitLab Container Registry
-echo "🔑 Logging into Container Registry ($REGISTRY_URL)..."
+echo "Logging into Container Registry ($REGISTRY_URL)..."
 echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin "$REGISTRY_URL"
 
 # Pull latest container images
-echo "📥 Pulling latest application images..."
+echo "Pulling latest application images..."
 docker compose pull
 
 # Apply zero-downtime container updates
-echo "🔄 Upgrading application containers..."
+echo "Upgrading application containers..."
 docker compose up -d --remove-orphans
 
 # Health Check Validation Loop
-echo "⏳ Verifying application health status..."
+echo "Verifying application health status..."
 MAX_RETRIES=12
 RETRY_COUNT=0
 HEALTHY=false
@@ -51,12 +51,12 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
 done
 
 if [ "$HEALTHY" = true ]; then
-    echo "✅ Deployment Successful! All services healthy."
+    echo "Deployment Successful! All services healthy."
     docker compose ps
     echo "Timestamp: $(date)"
     exit 0
 else
-    echo "❌ Deployment Failed! Nginx healthcheck returned HTTP $HTTP_CODE"
+    echo "Deployment Failed! Nginx healthcheck returned HTTP $HTTP_CODE"
     docker compose logs --tail 50
     exit 1
 fi

@@ -19,6 +19,8 @@ terraform/crash.log
 # Environment & Secrets
 .env
 .env.*
+!*.enc.env
+!secrets.enc.env
 *.pem
 *.key
 
