@@ -4,18 +4,7 @@ kind: Kustomization
 namespace: manveersyan-group
 
 resources:
-  - ../../base/namespace.yaml
-  - ../../base/web-frontend/deployment.yaml
-  - ../../base/web-frontend/service.yaml
-  - ../../base/web-frontend/hpa.yaml
-  - ../../base/api-gateway/deployment.yaml
-  - ../../base/api-gateway/service.yaml
-  - ../../base/api-gateway/hpa.yaml
-  - ../../base/auth-service/deployment.yaml
-  - ../../base/auth-service/service.yaml
-  - ../../base/auth-service/hpa.yaml
-  - ../../base/ingress/ingress.yaml
-  - ../../base/external-secret.yaml
+  - ../../base
   - pdb.yaml
   - network-policy.yaml
 
@@ -26,18 +15,18 @@ patches:
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 5
+        value: 1
   - target:
       kind: Deployment
       name: api-gateway
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 5
+        value: 1
   - target:
       kind: Deployment
       name: auth-service
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 5
+        value: 1

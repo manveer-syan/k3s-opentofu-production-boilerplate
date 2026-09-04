@@ -19,7 +19,7 @@ apt-get install -y \
     git \
     nginx \
     docker.io \
-    docker-compose-v2
+    docker-compose
 
 # Start and enable Docker service
 systemctl start docker
@@ -46,4 +46,10 @@ ENVFILE
 
 chown -R ubuntu:ubuntu /opt/apps
 
-echo "EC2 Infrastructure Bootstrapping Complete."
+# Automate Repository Cloning & Container Stack Deployment
+git clone https://gitlab.com/manveersyan-group/ate.git /opt/apps/projectATE || (cd /opt/apps/projectATE && git pull)
+cd /opt/apps/projectATE/ate/docker-compose
+docker compose --env-file /opt/apps/docker-compose.env up -d
+
+echo "EC2 Infrastructure & Application Bootstrapping Complete."
+EOF

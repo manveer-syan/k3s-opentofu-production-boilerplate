@@ -1,4 +1,4 @@
-apiVersion: autoscaling/2
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: api-gateway-hpa

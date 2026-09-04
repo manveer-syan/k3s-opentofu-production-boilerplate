@@ -26,16 +26,16 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
-        readOnlyRootFilesystem: true
       containers:
         - name: web-frontend
           image: registry.gitlab.com/manveersyan-group/web-frontend:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
               name: http
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           resources:

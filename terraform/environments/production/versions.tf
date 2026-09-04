@@ -1,6 +1,6 @@
 # ==============================================================================
-# Terraform Version & Provider Requirements
-# Path: terraform/versions.tf
+# Production Environment Provider Version Pinning
+# Path: terraform/environments/production/versions.tf
 # ==============================================================================
 
 terraform {

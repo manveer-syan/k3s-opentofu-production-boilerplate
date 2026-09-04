@@ -26,11 +26,10 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
-        readOnlyRootFilesystem: true
       containers:
         - name: auth-service
           image: registry.gitlab.com/manveersyan-group/auth-service:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
               name: http
@@ -39,6 +38,7 @@ spec:
                 name: db-credentials-secret
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           resources:
@@ -56,7 +56,7 @@ spec:
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /health
               port: 5000
             initialDelaySeconds: 5
             periodSeconds: 5
