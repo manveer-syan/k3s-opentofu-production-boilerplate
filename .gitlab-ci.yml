@@ -41,6 +41,17 @@ validate_ansible:
     - pip install ansible
     - ansible-playbook --syntax-check ansible/site.yml || true
 
+security_scan_iac:
+  stage: validate
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - echo "Scanning Kubernetes manifests and OpenTofu IaC for misconfigurations..."
+    - trivy config k8s/
+    - trivy config terraform/
+  allow_failure: true
+
 # ------------------------------------------------------------------------------
 # Stage 2: OpenTofu Plan (Dry Run)
 # ------------------------------------------------------------------------------
