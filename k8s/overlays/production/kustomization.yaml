@@ -8,6 +8,14 @@ resources:
   - pdb.yaml
   - network-policy.yaml
 
+images:
+  - name: registry.gitlab.com/manveersyan-group/web-frontend
+    newTag: latest
+  - name: registry.gitlab.com/manveersyan-group/api-gateway
+    newTag: latest
+  - name: registry.gitlab.com/manveersyan-group/auth-service
+    newTag: latest
+
 patches:
   - target:
       kind: Deployment
