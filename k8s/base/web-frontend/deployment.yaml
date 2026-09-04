@@ -31,7 +31,7 @@ spec:
       containers:
         - name: web-frontend
           image: registry.gitlab.com/manveersyan-group/web-frontend:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
               name: http

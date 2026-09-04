@@ -31,7 +31,7 @@ spec:
       containers:
         - name: api-gateway
           image: registry.gitlab.com/manveersyan-group/api-gateway:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http
