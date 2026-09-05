@@ -1,6 +1,6 @@
 # ==============================================================================
-# AWS Provider Configuration with Default Tags
-# Path: terraform/providers.tf
+# AWS Provider Configuration for Production
+# Path: terraform/environments/production/providers.tf
 # ==============================================================================
 
 provider "aws" {
@@ -11,7 +11,7 @@ provider "aws" {
     tags = {
       Project     = var.project_name
       Environment = var.environment
-      ManagedBy   = "Terraform"
+      ManagedBy   = "OpenTofu"
       Repository  = "manveersyan-group/ate"
     }
   }
