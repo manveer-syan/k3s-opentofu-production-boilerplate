@@ -9,7 +9,7 @@ set -euo pipefail
 PROJECT_PATH="manveersyan-group/ate"
 
 echo "=================================================="
-echo "⚙️ Configuring GitLab Masked Variables for $PROJECT_PATH..."
+echo "Configuring GitLab Masked Variables for $PROJECT_PATH..."
 echo "=================================================="
 
 set_var() {
@@ -35,4 +35,4 @@ set_var "REGISTRY_PASSWORD" "${REGISTRY_PASSWORD:-dummy-token-pass}" "true"
 set_var "DATABASE_PASSWORD" "${DATABASE_PASSWORD:-ProdStrongPassword987!}" "true"
 set_var "JWT_SECRET" "${JWT_SECRET:-super-secret-jwt-token-key-32bytes-min}" "true"
 
-echo "✅ All GitLab CI/CD protected and masked variables configured successfully."
+echo "All GitLab CI/CD protected and masked variables configured successfully."

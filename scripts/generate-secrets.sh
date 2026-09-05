@@ -7,7 +7,7 @@
 set -euo pipefail
 
 echo "=================================================="
-echo "🔐 Generating Secure Production Secrets..."
+echo "Generating Secure Production Secrets..."
 echo "=================================================="
 
 JWT_SECRET=$(openssl rand -base64 32)
@@ -39,5 +39,5 @@ API_GATEWAY_URL=http://api-gateway:8080
 AUTH_SERVICE_URL=http://auth-service:5000
 ENVEOF
 
-echo "✅ Generated secrets saved to $TARGET_FILE"
-echo "⚠️  IMPORTANT: Mask and upload these values into GitLab CI/CD Variables!"
+echo "Generated secrets saved to $TARGET_FILE"
+echo "IMPORTANT: Mask and upload these values into GitLab CI/CD Variables!"
