@@ -28,9 +28,12 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: auth-service
-          image: registry.gitlab.com/manveersyan-group/auth-service:latest
+          image: registry.gitlab.com/manveersyan-group/auth-service:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000

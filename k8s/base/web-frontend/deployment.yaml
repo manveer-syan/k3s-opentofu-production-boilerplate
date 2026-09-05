@@ -30,9 +30,12 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: web-frontend
-          image: registry.gitlab.com/manveersyan-group/web-frontend:latest
+          image: registry.gitlab.com/manveersyan-group/web-frontend:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000

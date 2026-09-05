@@ -28,9 +28,12 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: notification-service
-          image: registry.gitlab.com/manveersyan-group/notification-service:latest
+          image: registry.gitlab.com/manveersyan-group/notification-service:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 7000
