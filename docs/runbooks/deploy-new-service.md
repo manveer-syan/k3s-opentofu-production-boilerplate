@@ -6,7 +6,7 @@
 ---
 
 ## Step 1: Create Repository in GitLab Group
-1. In GitLab UI, navigate to `manveersyan-group` ➔ **New Project** ➔ `notification-service`.
+1. In GitLab UI, navigate to `manveersyan-group` -> **New Project** -> `notification-service`.
 2. Push your initial codebase.
 
 ## Step 2: Add Production Multi-Stage Dockerfile
