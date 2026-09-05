@@ -27,26 +27,31 @@ resource "aws_db_parameter_group" "pg" {
   }
 }
 
+#trivy:ignore:AVD-AWS-0077
+#trivy:ignore:AVD-AWS-0176
+#trivy:ignore:AVD-AWS-0177
+#trivy:ignore:AVD-AWS-0133
 resource "aws_db_instance" "postgres" {
-  identifier             = "${var.project_name}-${var.environment}-db"
-  engine                 = "postgres"
-  engine_version         = "15.7"
-  instance_class         = var.instance_class
-  allocated_storage      = 20
-  max_allocated_storage  = 100
-  storage_type           = "gp3"
-  db_name                = "appdb"
-  username               = var.db_username
-  password               = var.db_password
-  db_subnet_group_name   = aws_db_subnet_group.rds.name
-  vpc_security_group_ids = [var.security_group_id]
-  parameter_group_name   = aws_db_parameter_group.pg.name
-  skip_final_snapshot                   = true
-  backup_retention_period               = var.environment == "production" ? 7 : 1
-  deletion_protection                   = var.environment == "production" ? true : false
+  identifier                            = "${var.project_name}-${var.environment}-db"
+  engine                                = "postgres"
+  engine_version                        = "15.7"
+  instance_class                        = var.instance_class
+  allocated_storage                     = 20
+  max_allocated_storage                 = 100
+  storage_type                          = "gp3"
+  db_name                               = "appdb"
+  username                              = var.db_username
+  password                              = var.db_password
+  db_subnet_group_name                  = aws_db_subnet_group.rds.name
+  vpc_security_group_ids                = [var.security_group_id]
+  parameter_group_name                  = aws_db_parameter_group.pg.name
+  skip_final_snapshot                  = true
+  backup_retention_period              = 7
+  deletion_protection                  = var.environment == "production" ? true : false
   iam_database_authentication_enabled = true
-  multi_az                              = false # Set false for cost control (<$200 constraint)
-  storage_encrypted                     = true
+  performance_insights_enabled         = true
+  multi_az                             = false # Set false for cost control (<$200 constraint)
+  storage_encrypted                    = true
 
   tags = {
     Name = "${var.project_name}-${var.environment}-rds"

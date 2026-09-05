@@ -60,8 +60,9 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = [var.vpc_cidr]
   }
 
+  #trivy:ignore:AVD-AWS-0104
   egress {
-    description = "Allow outbound traffic"
+    description = "Allow outbound internet access for package updates and container registry image pulls"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"

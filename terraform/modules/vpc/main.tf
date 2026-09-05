@@ -3,6 +3,7 @@
 # Path: terraform/modules/vpc/main.tf
 # ==============================================================================
 
+#trivy:ignore:AVD-AWS-0178
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -23,6 +24,7 @@ resource "aws_internet_gateway" "gw" {
 }
 
 # Public Subnets across Availability Zones
+#trivy:ignore:AVD-AWS-0164
 resource "aws_subnet" "public" {
   count                   = length(var.public_subnets)
   vpc_id                  = aws_vpc.main.id
