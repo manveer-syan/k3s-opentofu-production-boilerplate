@@ -43,20 +43,18 @@ The platform employs a **hybrid orchestration model**:
 
 ```mermaid
 flowchart TD
-    Client([Clients & Web Browsers]) -->|"HTTPS :443 / HTTP :80"| EIP["AWS Elastic IP<br/>34.198.184.122"]
-    EIP --> Traefik["Traefik L7 Ingress Controller<br/>Ports: 80 / 443 &bull; TLS Termination"]
+    Client([Clients and Web Browsers]) -->|"HTTPS :443 / HTTP :80"| EIP["AWS Elastic IP<br/>34.198.184.122"]
+    EIP --> Traefik["Traefik L7 Ingress Controller<br/>Ports: 80 / 443 • TLS Termination"]
 
-    subgraph VPC ["AWS Virtual Private Cloud&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(10.0.0.0/16 — us-east-1)"]
-        subgraph PublicSubnet ["Public Subnet (10.0.1.0/24)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EC2 Host (t3.small) &bull; K3s Cluster"]
+    subgraph VPC ["AWS Virtual Private Cloud              (10.0.0.0/16 — us-east-1)"]
+        subgraph PublicSubnet ["Public Subnet (10.0.1.0/24)              EC2 Host (t3.small) • K3s Cluster"]
             Traefik -->|"Path: /"| FATE["<b>FATE (:3000)</b><br/>Web Frontend"]
             Traefik -->|"Path: /api"| GATE["<b>GATE (:8080)</b><br/>API Gateway"]
             Traefik -->|"Path: /auth"| STATE["<b>STATE (:5000)</b><br/>Auth Service"]
             Traefik -->|"Path: /notifications"| DATE["<b>DATE (:7000)</b><br/>Notification"]
         end
 
-        subgraph PrivateSubnet ["Private Subnet"]
-            RDS["<b>AWS RDS PostgreSQL 15.7 (Multi-AZ)</b><br/>Subnet: 10.0.10.0/24 &bull; Port: 5432 (TLS)<br/>gp3 Storage Auto-scaling &bull; Automated Backups"]
-        end
+        RDS[("<b>AWS RDS PostgreSQL 15.7 (Multi-AZ)</b><br/>Private Subnet (10.0.10.0/24) • Port: 5432 (TLS)<br/>gp3 Storage Auto-scaling • Automated Backups")]
 
         FATE ~~~ RDS
         GATE -->|"PostgreSQL (TLS)"| RDS
@@ -64,9 +62,9 @@ flowchart TD
         DATE -->|"PostgreSQL (TLS)"| RDS
     end
 
-    subgraph Platform ["Platform Telemetry & State Governance"]
+    subgraph Platform ["Platform Telemetry and State Governance"]
         direction LR
-        S3["<b>AWS S3 Bucket</b><br/>Logs & Artifacts<br/>AES-256 | Glacier"]
+        S3["<b>AWS S3 Bucket</b><br/>Logs and Artifacts<br/>AES-256 / Glacier"]
         Prom["<b>Prometheus v2.45</b><br/>Metrics Scraper<br/>15s Interval"]
         Graf["<b>Grafana OSS</b><br/>Dashboards Viz<br/>overview.json"]
         Dynamo["<b>AWS DynamoDB</b><br/>ate-tf-locks<br/>State Locking"]
@@ -74,7 +72,7 @@ flowchart TD
         S3 ~~~ Prom ~~~ Graf ~~~ Dynamo
     end
 
-    PrivateSubnet ~~~ Platform
+    RDS ~~~ Platform
 ```
 
 
@@ -271,12 +269,12 @@ sequenceDiagram
     participant EC2 as AWS EC2 Production Host (K3s)
 
     Dev->>AppRepo: git push origin main
-    AppRepo->>AppRepo: Run Unit Tests & Build Docker Image
+    AppRepo->>AppRepo: Run Unit Tests and Build Docker Image
     AppRepo->>AppRepo: Aqua Security Trivy Container Scan
     AppRepo->>Reg: Push registry.gitlab.com/manveersyan-group/<app>:<sha>
-    AppRepo->>AteRepo: Trigger Downstream Pipeline with $TRIGGERED_APP_NAME & $TRIGGERED_IMAGE_TAG
+    AppRepo->>AteRepo: Trigger Downstream Pipeline with $TRIGGERED_APP_NAME and $TRIGGERED_IMAGE_TAG
     AteRepo->>AteRepo: Update k8s/overlays/production/kustomization.yaml image tag
-    AteRepo->>AteRepo: Run OpenTofu & Kustomize syntax validation
+    AteRepo->>AteRepo: Run OpenTofu and Kustomize syntax validation
     AteRepo->>EC2: Sync updated K8s manifests via secure SSH/SSM
     AteRepo->>EC2: kubectl apply -k k8s/overlays/production
     AteRepo->>EC2: kubectl rollout restart deployment/<app> -n manveersyan-group
