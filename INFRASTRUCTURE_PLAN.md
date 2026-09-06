@@ -33,7 +33,7 @@ This repository manages the underlying cloud infrastructure (AWS EC2, Elastic IP
 - **`site.yml`**: Master playbook orchestrating host configuration.
 
 ### C. Enterprise K3s Kubernetes Orchestration (`k8s/`)
-- **`base/`**: Core Kubernetes resource manifests (`namespace.yaml`, `secret.yaml`, `ingress.yaml`, and service/deployment definitions for `web-frontend`, `api-gateway`, `auth-service`).
+- **`base/`**: Core Kubernetes resource manifests (`namespace.yaml`, `secret.example.yaml`, `ingress.yaml`, and service/deployment definitions for `web-frontend`, `api-gateway`, `auth-service`).
 - **`overlays/production/`**: Production-specific Kustomize configuration (`pdb.yaml`, `network-policy.yaml`, replica scaling).
 
 ---

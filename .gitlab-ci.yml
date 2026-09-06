@@ -104,6 +104,35 @@ deploy_to_k3s:
       fi
     - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "mkdir -p /opt/apps/projectATE/ate"
     - scp -o StrictHostKeyChecking=no -r k8s ubuntu@$EC2_HOST:/opt/apps/projectATE/ate/
+    - |
+      echo "Applying db-credentials-secret from GitLab CI/CD protected variables..."
+      DB_USER="${DATABASE_USER:-produser}"
+      DB_PASS="${DATABASE_PASSWORD:-}"
+      DB_URL="${DATABASE_URL:-}"
+      JWT_SEC="${JWT_SECRET:-}"
+
+      if [ -z "$DB_URL" ] && [ -n "$DB_PASS" ]; then
+        DB_HOST="${DATABASE_HOST:-manveersyan-prod-db.c0fcqy40cv6i.us-east-1.rds.amazonaws.com}"
+        DB_PORT="${DATABASE_PORT:-5432}"
+        DB_NAME="${DATABASE_NAME:-appdb}"
+        DB_URL="postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
+      fi
+
+      if [ -n "$DB_PASS" ] || [ -n "$DB_URL" ]; then
+        cat <<EOF | ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "kubectl apply -f -"
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials-secret
+  namespace: manveersyan-group
+type: Opaque
+stringData:
+  DATABASE_USER: "${DB_USER}"
+  DATABASE_PASSWORD: "${DB_PASS}"
+  DATABASE_URL: "${DB_URL}"
+  JWT_SECRET: "${JWT_SEC}"
+EOF
+      fi
     - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "kubectl apply -k /opt/apps/projectATE/ate/k8s/overlays/production && kubectl rollout restart deployment -n manveersyan-group"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"

@@ -9,12 +9,16 @@ bin/
 dist/
 
 # Terraform Local State & Cache
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.backup
-terraform/*.tfstate.d/
-terraform/.terraform.lock.hcl
-terraform/crash.log
+.terraform/
+**/.terraform/
+*.tfstate
+**/*.tfstate
+*.tfstate.*
+**/*.tfstate.*
+.terraform.lock.hcl
+**/.terraform.lock.hcl
+crash.log
+**/crash.log
 
 # Environment & Secrets
 .env
@@ -23,6 +27,9 @@ terraform/crash.log
 !secrets.enc.env
 *.pem
 *.key
+k8s/base/secret.yaml
+k8s/**/secret.yaml
+*.secret.yaml
 
 # Operating System & Editor Files
 .DS_Store

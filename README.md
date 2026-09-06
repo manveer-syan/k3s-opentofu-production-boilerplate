@@ -194,7 +194,7 @@ K3s provides full Kubernetes compliance without the multi-gigabyte RAM overhead 
 k8s/
 ├── base/
 │   ├── namespace.yaml                 # manveersyan-group isolated namespace
-│   ├── secret.yaml                    # Base secret manifests
+│   ├── secret.example.yaml            # Base secret manifest template (secrets injected via CI/CD / ESO)
 │   ├── external-secret.yaml           # External Secrets Operator (AWS Secrets Manager)
 │   ├── kustomization.yaml             # Core manifest aggregator
 │   ├── ingress/
