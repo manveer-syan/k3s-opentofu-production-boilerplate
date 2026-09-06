@@ -41,6 +41,128 @@ The platform employs a **hybrid orchestration model**:
 
 ### End-to-End Infrastructure Blueprint
 
+```mermaid
+flowchart TB
+    %% External Internet & Ingress Tier
+    subgraph IngressTier ["🌐 External Traffic & Ingress Tier"]
+        direction TB
+        Client["👥 Clients & Web Browsers"]
+        EIP["📡 AWS Elastic IP (EIP)\n34.198.184.122"]
+        IGW["🚪 AWS Internet Gateway\nigw-ate-vpc"]
+        Client ==>|"HTTPS :443 / HTTP :80"| EIP
+        EIP ==> IGW
+    end
+
+    %% AWS VPC Boundary
+    subgraph VPC ["☁️ AWS Virtual Private Cloud (VPC) — 10.0.0.0/16 (us-east-1)"]
+        direction TB
+
+        %% Public Subnet
+        subgraph PublicSubnet ["🛡️ Public Subnet: 10.0.1.0/24 (us-east-1a)"]
+            direction TB
+
+            subgraph EC2Host ["🖥️ AWS EC2 Application Host: t3.small (Ubuntu 22.04 LTS | 2 vCPU, 2GB RAM + 2GB Swap)\nSecurity Group: ec2-sg (In: 80, 443, SSM | Out: 0.0.0.0/0) | IAM: SSM + CloudWatch"]
+                direction TB
+
+                subgraph K3sCluster ["☸️ K3s Lightweight Kubernetes Cluster (Namespace: manveersyan-group)"]
+                    direction TB
+
+                    Traefik["🔀 Traefik L7 Ingress Controller\nHost Ports: 80 / 443 | SSL/TLS Termination & Path Routing"]
+
+                    subgraph MicroservicesTier ["Microservice Pod Tier (Zero-Trust | NetPol: Traefik Ingress Only | Egress: RDS, HTTPS, DNS)"]
+                        direction TB
+
+                        FATE["🎨 FATE (web-frontend)\nService :80 ➔ Pod :3000\nVanilla TS SPA & Nginx Proxy\nReplicas: 1-5 (HPA / PDB)"]
+                        GATE["⚡ GATE (api-gateway)\nService :80 ➔ Pod :8080\nGo REST API & CRUD Router\nReplicas: 1-5 (HPA / PDB)"]
+                        STATE["🔐 STATE (auth-service)\nService :80 ➔ Pod :5000\nBcrypt Cost 12 & JWT Engine\nReplicas: 1-5 (HPA / PDB)"]
+                        DATE["📬 DATE (notification-service)\nService :80 ➔ Pod :7000\nWorker Pools (N=5) & Queue\nReplicas: 1-5 (HPA / PDB)"]
+                    end
+
+                    Traefik ==>|"Path: /"| FATE
+                    Traefik ==>|"Path: /api/*"| GATE
+                    Traefik ==>|"Path: /auth/*"| STATE
+                    Traefik ==>|"Path: /notifications/*"| DATE
+                end
+            end
+        end
+
+        %% Private Subnet
+        subgraph PrivateSubnet ["🔒 Private Data Subnets: 10.0.10.0/24 & 10.0.11.0/24 (Multi-AZ Subnet Group)"]
+            direction TB
+            RDS[("🗄️ AWS RDS PostgreSQL 15.7 (db.t3.micro)\nSecurity Group: rds-sg (Ingress: ONLY ec2-sg:5432)\nStorage: 20GB-100GB gp3 Auto-scaling | Daily Automated Backups\nPerformance Insights & AWS KMS Storage Encryption")]
+        end
+
+        %% Database Connections from Pods
+        GATE ==>|"TCP 5432 (TLS)"| RDS
+        STATE ==>|"TCP 5432 (TLS)"| RDS
+        DATE ==>|"TCP 5432 (TLS)"| RDS
+    end
+
+    IGW ==> Traefik
+
+    %% Platform Services & Telemetry
+    subgraph AuxiliaryTier ["☁️ Platform State Governance & Telemetry Infrastructure"]
+        direction LR
+
+        subgraph StorageGovernance ["📦 State & Storage Governance"]
+            direction TB
+            S3[("🪣 AWS S3 Logs & State Bucket\nmanveersyan-production-logs-storage\nAES-256 Encryption | Versioning ON\nPublic Block: ON | 30-Day Glacier Transition")]
+            DynamoDB[("🔒 AWS DynamoDB Table (ate-tf-locks)\nAtomic OpenTofu State Locking")]
+        end
+
+        subgraph MonitoringStack ["📊 Observability & Host Telemetry"]
+            direction TB
+            Prometheus["📈 Prometheus v2.45 Server\n15s Metrics Scrape Interval"]
+            Grafana["📉 Grafana Dashboards\noverview.json System & App Viz"]
+            Alertmanager["🚨 Prometheus Alertmanager\nSlack & Email Alerting Rules"]
+            NodeExporter["🩺 Node Exporter :9100\nHost CPU, RAM, Disk & Network"]
+
+            NodeExporter --> Prometheus
+            Prometheus --> Grafana
+            Prometheus --> Alertmanager
+        end
+    end
+
+    EC2Host -.->|"Log Archival & DB Snapshots"| S3
+    K3sCluster -.->|"App Metrics Scraping (:3000, :8080, :5000, :7000)"| Prometheus
+
+    %% Visual Styling Classes
+    style VPC fill:#f8fafc,stroke:#475569,stroke-width:2.5px,stroke-dasharray: 8 4
+    style PublicSubnet fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px
+    style PrivateSubnet fill:#f8fafc,stroke:#64748b,stroke-width:1.5px
+    style EC2Host fill:#ffffff,stroke:#3b82f6,stroke-width:2px
+    style K3sCluster fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    style MicroservicesTier fill:#ffffff,stroke:#94a3b8,stroke-width:1.5px
+    style AuxiliaryTier fill:#f8fafc,stroke:#475569,stroke-width:2.5px,stroke-dasharray: 8 4
+    style StorageGovernance fill:#f0fdfa,stroke:#0d9488,stroke-width:1.5px
+    style MonitoringStack fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px
+
+    classDef clientStyle fill:#ffffff,stroke:#334155,stroke-width:2px,color:#0f172a
+    classDef ingressStyle fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    classDef fateStyle fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0369a1
+    classDef gateStyle fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#15803d
+    classDef stateStyle fill:#fffbeb,stroke:#d97706,stroke-width:2px,color:#b45309
+    classDef dateStyle fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8
+    classDef rdsStyle fill:#eff6ff,stroke:#1d4ed8,stroke-width:2.5px,color:#1e40af
+    classDef obsStyle fill:#ffffff,stroke:#ea580c,stroke-width:1.5px,color:#9a3412
+    classDef s3Style fill:#ffffff,stroke:#0d9488,stroke-width:1.5px,color:#115e59
+
+    class Client clientStyle
+    class EIP,IGW,Traefik ingressStyle
+    class FATE fateStyle
+    class GATE gateStyle
+    class STATE stateStyle
+    class DATE dateStyle
+    class RDS rdsStyle
+    class Prometheus,Grafana,Alertmanager,NodeExporter obsStyle
+    class S3,DynamoDB s3Style
+```
+
+> 🔍 **Vector Graphic Canvas**: A standalone high-resolution SVG export of this topology is maintained at [`docs/architecture/system-architecture.svg`](docs/architecture/system-architecture.svg).
+
+<details>
+<summary><b>View Plaintext ASCII Topology Blueprint (CLI Fallback)</b></summary>
+
 ```
                                       [ Clients & Web Browsers ]
                                                   |
@@ -88,7 +210,7 @@ The platform employs a **hybrid orchestration model**:
   |  |  NetworkPolicy Rules:        |                   |                   |  |  |
   |  |  - Ingress: Traefik only     |                   |                   |  |  |
   |  |  - Egress: 10.0.0.0/16:5432, 0.0.0.0/0:443,80,53 |                   |  |  |
-  |  +--+---------------------------+-------------------+-------------------+--+  |
+  |  |  +--+---------------------------+-------------------+-------------------+--+  |
   +-----+---------------------------|-------------------|-------------------|-----+
                                     |                   |                   |
   PRIVATE SUBNET (10.0.10.0/24 & 10.0.11.0/24, Multi-AZ Subnet Group)       |
@@ -116,6 +238,7 @@ The platform employs a **hybrid orchestration model**:
   | - 30-Day Glacier Lifecycle Rule  |       | - Node Exporter :9100 System Stats |
   +----------------------------------+       +------------------------------------+
 ```
+</details>
 
 ---
 
