@@ -39,52 +39,65 @@ The platform employs a **hybrid orchestration model**:
 
 ## 2. Architectural Topology & Traffic Routing
 
-### End-to-End Traffic Routing & Infrastructure Flow
+### End-to-End Infrastructure Blueprint
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Clients & Web Browsers
-    participant EIP as AWS Elastic IP (34.198.184.122)
-    participant IGW as AWS Internet Gateway
-    participant Traefik as Traefik Ingress (EC2 Host :80/:443)
-    participant FATE as FATE (web-frontend :3000)
-    participant GATE as GATE (api-gateway :8080)
-    participant STATE as STATE (auth-service :5000)
-    participant DATE as DATE (notification-service :7000)
-    participant RDS as AWS RDS PostgreSQL 15.7 (:5432)
-    participant S3 as AWS S3 Logs Bucket
-    participant Obs as Prometheus (:9090)
+flowchart LR
+    Client([Clients & Web Browsers]) -->|"HTTPS :443<br/>HTTP :80"| EIP[AWS Elastic IP<br/>34.198.184.122]
+    EIP --> IGW[AWS Internet Gateway]
 
-    Note over Client,IGW: External Public Traffic (Internet)
-    Client->>EIP: HTTPS :443 / HTTP :80
-    EIP->>IGW: Route to VPC (10.0.0.0/16)
-    IGW->>Traefik: Ingress to Public Subnet (10.0.1.0/24)
+    subgraph VPC ["AWS Virtual Private Cloud (10.0.0.0/16 — us-east-1)"]
+        direction LR
 
-    Note over Traefik,DATE: K3s Cluster (Namespace: manveersyan-group)
-    alt Path: / (Frontend UI)
-        Traefik->>FATE: Reverse proxy to web-frontend (:80 -> :3000)
-        FATE-->>Client: HTTP 200 (Serve Vanilla TS SPA)
-    else Path: /auth/* (Authentication & Identity)
-        Traefik->>STATE: Forward to auth-service (:80 -> :5000, strip prefix)
-        STATE->>RDS: Query user & verify bcrypt hash (TCP 5432 TLS)
-        RDS-->>STATE: User record
-        STATE-->>Client: HTTP 200 (Return signed JWT)
-    else Path: /api/* (API Gateway & Core Logic)
-        Traefik->>GATE: Forward to api-gateway (:80 -> :8080, strip prefix)
-        GATE->>RDS: Execute SQL query with connection pool (TCP 5432 TLS)
-        RDS-->>GATE: Result set
-        GATE-->>Client: HTTP 200 (JSON payload)
-    else Path: /notifications/* (Async Dispatch)
-        Traefik->>DATE: Enqueue event payload (:80 -> :7000, strip prefix)
-        DATE->>RDS: Persist audit log (TCP 5432 TLS)
-        DATE-->>Client: HTTP 202 Accepted (queued for N=5 workers)
+        subgraph PublicSubnet ["Public Subnet (10.0.1.0/24 — us-east-1a)"]
+            direction TB
+
+            subgraph EC2 ["AWS EC2 Host: t3.small (Ubuntu 22.04 LTS | 2 vCPU, 2GB RAM + 2GB Swap)<br/>Security Group: ec2-sg (In: 80, 443, SSM | Out: 0.0.0.0/0) | IAM: SSM Managed"]
+                direction TB
+
+                subgraph K3s ["K3s Kubernetes Cluster (Namespace: manveersyan-group)"]
+                    direction TB
+
+                    Traefik["Traefik L7 Ingress Controller<br/>Ports: 80 / 443 | TLS Termination"]
+
+                    FATE["<b>FATE (web-frontend)</b><br/>Service :80 ➔ Pod :3000<br/>Vite / TS SPA & Nginx Proxy<br/>Replicas: 1-5 (HPA / PDB)"]
+                    GATE["<b>GATE (api-gateway)</b><br/>Service :80 ➔ Pod :8080<br/>Go REST API & CRUD Router<br/>Replicas: 1-5 (HPA / PDB)"]
+                    STATE["<b>STATE (auth-service)</b><br/>Service :80 ➔ Pod :5000<br/>Bcrypt Cost 12 & JWT Engine<br/>Replicas: 1-5 (HPA / PDB)"]
+                    DATE["<b>DATE (notification-service)</b><br/>Service :80 ➔ Pod :7000<br/>Worker Pools (N=5) & Queue<br/>Replicas: 1-5 (HPA / PDB)"]
+
+                    Traefik -->|"Path: /"| FATE
+                    Traefik -->|"Path: /api/*"| GATE
+                    Traefik -->|"Path: /auth/*"| STATE
+                    Traefik -->|"Path: /notifications/*"| DATE
+                end
+            end
+        end
+
+        subgraph PrivateSubnet ["Private Subnet (10.0.10.0/24 & 10.0.11.0/24 Multi-AZ)"]
+            RDS[("<b>AWS RDS PostgreSQL 15.7</b> (db.t3.micro)<br/>Security Group: rds-sg (Ingress: ONLY ec2-sg:5432)<br/>Storage: 20GB-100GB gp3 Auto-scaling<br/>Automated Backups & KMS Encryption")]
+        end
+
+        GATE -->|"TCP 5432 (TLS)"| RDS
+        STATE -->|"TCP 5432 (TLS)"| RDS
+        DATE -->|"TCP 5432 (TLS)"| RDS
     end
 
-    Note over Traefik,Obs: Telemetry & State Archival
-    Obs-->>Traefik: Scrape metrics (:3000, :8080, :5000, :7000, :9100)
-    Traefik-->>S3: Stream access logs & state snapshots (Glacier 30d)
+    IGW --> Traefik
+
+    subgraph Platform ["Platform State & Observability"]
+        direction TB
+        S3[("AWS S3 Logs Bucket<br/>AES-256 | 30-Day Glacier")]
+        DynamoDB[("AWS DynamoDB Table<br/>ate-tf-locks (State Lock)")]
+        Prometheus["Prometheus v2.45 & Grafana<br/>15s Metrics Scrape & Alerts"]
+        NodeExporter["Node Exporter :9100<br/>Host Telemetry"]
+
+        NodeExporter --> Prometheus
+    end
+
+    EC2 -.->|"Log Archival"| S3
+    EC2 -.->|"Metrics Scrape"| Prometheus
 ```
+
 
 ---
 
