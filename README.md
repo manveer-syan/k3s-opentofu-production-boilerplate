@@ -44,28 +44,34 @@ The platform employs a **hybrid orchestration model**:
 ```mermaid
 flowchart TD
     Client([Clients & Web Browsers]) -->|"HTTPS :443 / HTTP :80"| EIP["AWS Elastic IP<br/>34.198.184.122"]
-    EIP --> Traefik["Traefik L7 Ingress Controller"]
+    EIP --> Traefik["Traefik L7 Ingress Controller<br/>Ports: 80 / 443 &bull; TLS Termination"]
 
-    subgraph VPC ["AWS Virtual Private Cloud (10.0.0.0/16 — us-east-1)"]
-        subgraph PublicSubnet ["Public Subnet (10.0.1.0/24) &bull; EC2 Host (t3.small) &bull; K3s Cluster"]
-            Traefik -->|"Path: /"| FATE["FATE (:3000)<br/>Web Frontend"]
-            Traefik -->|"Path: /api"| GATE["GATE (:8080)<br/>API Gateway"]
-            Traefik -->|"Path: /auth"| STATE["STATE (:5000)<br/>Auth & JWT"]
-            Traefik -->|"Path: /notifications"| DATE["DATE (:7000)<br/>Notifications"]
+    subgraph VPC ["AWS Virtual Private Cloud&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(10.0.0.0/16 — us-east-1)"]
+        subgraph PublicSubnet ["Public Subnet (10.0.1.0/24)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EC2 Host (t3.small) &bull; K3s Cluster"]
+            Traefik -->|"Path: /"| FATE["<b>FATE (:3000)</b><br/>Web Frontend"]
+            Traefik -->|"Path: /api"| GATE["<b>GATE (:8080)</b><br/>API Gateway"]
+            Traefik -->|"Path: /auth"| STATE["<b>STATE (:5000)</b><br/>Auth Service"]
+            Traefik -->|"Path: /notifications"| DATE["<b>DATE (:7000)</b><br/>Notification"]
         end
 
-        subgraph PrivateSubnet ["Private Subnet (Multi-AZ: 10.0.10.0/24)"]
-            RDS[("<br/>AWS RDS PostgreSQL 15.7 (:5432)<br/>gp3 Auto-scaling &bull; Daily Backups")]
+        subgraph PrivateSubnet ["Private Subnet"]
+            RDS["<b>AWS RDS PostgreSQL 15.7 (Multi-AZ)</b><br/>Subnet: 10.0.10.0/24 &bull; Port: 5432 (TLS)<br/>gp3 Storage Auto-scaling &bull; Automated Backups"]
         end
 
-        GATE -->|"TCP 5432 (TLS)"| RDS
-        STATE -->|"TCP 5432 (TLS)"| RDS
-        DATE -->|"TCP 5432 (TLS)"| RDS
+        FATE ~~~ RDS
+        GATE -->|"PostgreSQL (TLS)"| RDS
+        STATE -->|"PostgreSQL (TLS)"| RDS
+        DATE -->|"PostgreSQL (TLS)"| RDS
     end
 
     subgraph Platform ["Platform Telemetry & State Governance"]
         direction LR
-        S3[("AWS S3 Logs Bucket<br/>AES-256 | Glacier 30d")] ~~~ Obs["Prometheus & Grafana<br/>Metrics & Alerts"] ~~~ DynamoDB[("DynamoDB Table<br/>ate-tf-locks")]
+        S3["<b>AWS S3 Bucket</b><br/>Logs & Artifacts<br/>AES-256 | Glacier"]
+        Prom["<b>Prometheus v2.45</b><br/>Metrics Scraper<br/>15s Interval"]
+        Graf["<b>Grafana OSS</b><br/>Dashboards Viz<br/>overview.json"]
+        Dynamo["<b>AWS DynamoDB</b><br/>ate-tf-locks<br/>State Locking"]
+
+        S3 ~~~ Prom ~~~ Graf ~~~ Dynamo
     end
 
     PrivateSubnet ~~~ Platform
