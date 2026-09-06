@@ -42,39 +42,20 @@ The platform employs a **hybrid orchestration model**:
 ### End-to-End Infrastructure Blueprint
 
 ```mermaid
-flowchart LR
-    Client([Clients & Web Browsers]) -->|"HTTPS :443<br/>HTTP :80"| EIP[AWS Elastic IP<br/>34.198.184.122]
-    EIP --> IGW[AWS Internet Gateway]
+flowchart TD
+    Client([Clients & Web Browsers]) -->|"HTTPS :443 / HTTP :80"| EIP["AWS Elastic IP<br/>34.198.184.122"]
+    EIP --> Traefik["Traefik L7 Ingress Controller"]
 
     subgraph VPC ["AWS Virtual Private Cloud (10.0.0.0/16 — us-east-1)"]
-        direction LR
-
-        subgraph PublicSubnet ["Public Subnet (10.0.1.0/24 — us-east-1a)"]
-            direction TB
-
-            subgraph EC2 ["AWS EC2 Host: t3.small (Ubuntu 22.04 LTS | 2 vCPU, 2GB RAM + 2GB Swap)<br/>Security Group: ec2-sg (In: 80, 443, SSM | Out: 0.0.0.0/0) | IAM: SSM Managed"]
-                direction TB
-
-                subgraph K3s ["K3s Kubernetes Cluster (Namespace: manveersyan-group)"]
-                    direction TB
-
-                    Traefik["Traefik L7 Ingress Controller<br/>Ports: 80 / 443 | TLS Termination"]
-
-                    FATE["<b>FATE (web-frontend)</b><br/>Service :80 ➔ Pod :3000<br/>Vite / TS SPA & Nginx Proxy<br/>Replicas: 1-5 (HPA / PDB)"]
-                    GATE["<b>GATE (api-gateway)</b><br/>Service :80 ➔ Pod :8080<br/>Go REST API & CRUD Router<br/>Replicas: 1-5 (HPA / PDB)"]
-                    STATE["<b>STATE (auth-service)</b><br/>Service :80 ➔ Pod :5000<br/>Bcrypt Cost 12 & JWT Engine<br/>Replicas: 1-5 (HPA / PDB)"]
-                    DATE["<b>DATE (notification-service)</b><br/>Service :80 ➔ Pod :7000<br/>Worker Pools (N=5) & Queue<br/>Replicas: 1-5 (HPA / PDB)"]
-
-                    Traefik -->|"Path: /"| FATE
-                    Traefik -->|"Path: /api/*"| GATE
-                    Traefik -->|"Path: /auth/*"| STATE
-                    Traefik -->|"Path: /notifications/*"| DATE
-                end
-            end
+        subgraph PublicSubnet ["Public Subnet (10.0.1.0/24) &bull; EC2 Host (t3.small) &bull; K3s Cluster"]
+            Traefik -->|"Path: /"| FATE["FATE (:3000)<br/>Web Frontend"]
+            Traefik -->|"Path: /api"| GATE["GATE (:8080)<br/>API Gateway"]
+            Traefik -->|"Path: /auth"| STATE["STATE (:5000)<br/>Auth & JWT"]
+            Traefik -->|"Path: /notifications"| DATE["DATE (:7000)<br/>Notifications"]
         end
 
-        subgraph PrivateSubnet ["Private Subnet (10.0.10.0/24 & 10.0.11.0/24 Multi-AZ)"]
-            RDS[("<b>AWS RDS PostgreSQL 15.7</b> (db.t3.micro)<br/>Security Group: rds-sg (Ingress: ONLY ec2-sg:5432)<br/>Storage: 20GB-100GB gp3 Auto-scaling<br/>Automated Backups & KMS Encryption")]
+        subgraph PrivateSubnet ["Private Subnet (Multi-AZ: 10.0.10.0/24)"]
+            RDS[("<br/>AWS RDS PostgreSQL 15.7 (:5432)<br/>gp3 Auto-scaling &bull; Daily Backups")]
         end
 
         GATE -->|"TCP 5432 (TLS)"| RDS
@@ -82,20 +63,12 @@ flowchart LR
         DATE -->|"TCP 5432 (TLS)"| RDS
     end
 
-    IGW --> Traefik
-
-    subgraph Platform ["Platform State & Observability"]
-        direction TB
-        S3[("AWS S3 Logs Bucket<br/>AES-256 | 30-Day Glacier")]
-        DynamoDB[("AWS DynamoDB Table<br/>ate-tf-locks (State Lock)")]
-        Prometheus["Prometheus v2.45 & Grafana<br/>15s Metrics Scrape & Alerts"]
-        NodeExporter["Node Exporter :9100<br/>Host Telemetry"]
-
-        NodeExporter --> Prometheus
+    subgraph Platform ["Platform Telemetry & State Governance"]
+        direction LR
+        S3[("AWS S3 Logs Bucket<br/>AES-256 | Glacier 30d")] ~~~ Obs["Prometheus & Grafana<br/>Metrics & Alerts"] ~~~ DynamoDB[("DynamoDB Table<br/>ate-tf-locks")]
     end
 
-    EC2 -.->|"Log Archival"| S3
-    EC2 -.->|"Metrics Scrape"| Prometheus
+    PrivateSubnet ~~~ Platform
 ```
 
 
