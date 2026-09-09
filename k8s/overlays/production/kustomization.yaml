@@ -5,8 +5,33 @@ namespace: manveersyan-group
 
 resources:
   - ../../base
-  - pdb.yaml
-  - network-policy.yaml
+
+components:
+  - ../../components/high-availability
+  - ../../components/strict-network
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: web-frontend-config
+    envs:
+      - apps/web-frontend/params.env
+  - name: api-gateway-config
+    envs:
+      - apps/api-gateway/params.env
+  - name: auth-service-config
+    envs:
+      - apps/auth-service/params.env
+  - name: notification-service-config
+    envs:
+      - apps/notification-service/params.env
+
+generators:
+  - apps/web-frontend/secret-generator.yaml
+  - apps/api-gateway/secret-generator.yaml
+  - apps/auth-service/secret-generator.yaml
+  - apps/notification-service/secret-generator.yaml
 
 images:
   - name: registry.gitlab.com/manveersyan-group/web-frontend
@@ -25,25 +50,25 @@ patches:
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 1
+        value: 2
   - target:
       kind: Deployment
       name: api-gateway
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 1
+        value: 2
   - target:
       kind: Deployment
       name: auth-service
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 1
+        value: 2
   - target:
       kind: Deployment
       name: notification-service
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 1
+        value: 2

@@ -30,3 +30,14 @@ spec:
   selector:
     matchLabels:
       app: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: notification-service-pdb
+  namespace: manveersyan-group
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: notification-service

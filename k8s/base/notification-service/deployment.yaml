@@ -39,8 +39,10 @@ spec:
             - containerPort: 7000
               name: http
           envFrom:
+            - configMapRef:
+                name: notification-service-config
             - secretRef:
-                name: db-credentials-secret
+                name: notification-service-secret
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

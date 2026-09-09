@@ -39,8 +39,10 @@ spec:
             - containerPort: 5000
               name: http
           envFrom:
+            - configMapRef:
+                name: auth-service-config
             - secretRef:
-                name: db-credentials-secret
+                name: auth-service-secret
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

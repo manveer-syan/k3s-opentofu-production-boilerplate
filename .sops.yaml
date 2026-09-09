@@ -1,0 +1,10 @@
+# ==============================================================================
+# Mozilla SOPS Secrets Encryption Configuration
+# Path: ate/.sops.yaml
+# ==============================================================================
+creation_rules:
+  - path_regex: .*\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: "age192pk2xs5v4dan3rl2hf4ex59m8v7wurj05gzvxpypwwlzc09kegsrc7cf7"
+  - path_regex: .*\.env$
+    age: "age192pk2xs5v4dan3rl2hf4ex59m8v7wurj05gzvxpypwwlzc09kegsrc7cf7"

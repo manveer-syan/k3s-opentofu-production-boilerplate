@@ -1,19 +1,18 @@
 # ==============================================================================
-# GitLab CI/CD Pipeline Automation: Infrastructure & Deployment (ATE)
+# GitLab CI/CD Pipeline Automation: Pull-Based GitOps & Image Tagging
 # Path: .gitlab-ci.yml
 # ==============================================================================
 
 stages:
   - validate
   - plan
-  - deploy
+  - update-tags
 
 variables:
   DOCKER_DRIVER: overlay2
-  EC2_HOST: "34.198.184.122"
 
 # ------------------------------------------------------------------------------
-# Stage 1: Validate Infrastructure & Kubernetes Manifests
+# Stage 1: Validate Infrastructure & Kubernetes Base Manifests
 # ------------------------------------------------------------------------------
 validate_iac:
   stage: validate
@@ -31,8 +30,8 @@ validate_k8s_manifests:
     name: bitnami/kubectl:latest
     entrypoint: [""]
   script:
-    - kubectl kustomize k8s/overlays/production > /dev/null
-    - echo "Kubernetes manifests validation successful."
+    - kubectl kustomize k8s/base > /dev/null
+    - echo "Kubernetes base manifests validation successful."
 
 validate_ansible:
   stage: validate
@@ -70,70 +69,25 @@ plan_infrastructure:
     - if: $CI_COMMIT_BRANCH == "dev"
 
 # ------------------------------------------------------------------------------
-# Stage 3: Automated Kubernetes Rollout to K3s Cluster
+# Stage 3: Update Kustomize Image Tags (Pull-Based GitOps Trigger)
 # ------------------------------------------------------------------------------
-deploy_to_k3s:
-  stage: deploy
+update_image_tags:
+  stage: update-tags
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client bash sed
-    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - |
-      KEY_CONTENT="$SSH_PRIVATE_KEY"
-      if [ -f "$SSH_PRIVATE_KEY" ]; then
-        KEY_CONTENT="$(cat "$SSH_PRIVATE_KEY")"
-      fi
-      
-      if echo "$KEY_CONTENT" | base64 -d 2>/dev/null | grep -q "PRIVATE KEY"; then
-        echo "$KEY_CONTENT" | base64 -d > ~/.ssh/id_ed25519
-      elif echo "$KEY_CONTENT" | grep -q "PRIVATE KEY"; then
-        printf "%s\n" "$KEY_CONTENT" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
-      else
-        echo "$KEY_CONTENT" | base64 -d > ~/.ssh/id_ed25519 2>/dev/null || printf "%s\n" "$KEY_CONTENT" > ~/.ssh/id_ed25519
-      fi
-    - chmod 600 ~/.ssh/id_ed25519
-    - echo "SSH Key Header check:" && head -n 1 ~/.ssh/id_ed25519
-    - eval $(ssh-agent -s)
-    - ssh-add ~/.ssh/id_ed25519
+    - apk add --no-cache git bash sed
   script:
-    - echo "Deploying updated manifests to production K3s cluster..."
     - |
       if [ -n "$TRIGGERED_APP_NAME" ] && [ -n "$TRIGGERED_IMAGE_TAG" ]; then
-        echo "Updating image tag for $TRIGGERED_APP_NAME to $TRIGGERED_IMAGE_TAG..."
+        echo "Updating image tag for $TRIGGERED_APP_NAME to $TRIGGERED_IMAGE_TAG in Git..."
         sed -i "/name: registry.gitlab.com\/manveersyan-group\/${TRIGGERED_APP_NAME}$/{n;s/newTag:.*/newTag: ${TRIGGERED_IMAGE_TAG}/;}" k8s/overlays/production/kustomization.yaml
+        git config user.name "GitLab CI Bot"
+        git config user.email "ci-bot@manveersyan.com"
+        git add k8s/overlays/production/kustomization.yaml
+        git commit -m "chore(gitops): update image tag for ${TRIGGERED_APP_NAME} to ${TRIGGERED_IMAGE_TAG} [skip ci]" || echo "No changes to commit"
+      else
+        echo "No image tag update requested. Pull-based GitOps operator (ArgoCD/Flux) handles reconciliation."
       fi
-    - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "mkdir -p /opt/apps/projectATE/ate"
-    - scp -o StrictHostKeyChecking=no -r k8s ubuntu@$EC2_HOST:/opt/apps/projectATE/ate/
-    - |
-      echo "Applying db-credentials-secret from GitLab CI/CD protected variables..."
-      DB_USER="${DATABASE_USER:-produser}"
-      DB_PASS="${DATABASE_PASSWORD:-}"
-      DB_URL="${DATABASE_URL:-}"
-      JWT_SEC="${JWT_SECRET:-}"
-
-      if [ -z "$DB_URL" ] && [ -n "$DB_PASS" ]; then
-        DB_HOST="${DATABASE_HOST:-manveersyan-prod-db.c0fcqy40cv6i.us-east-1.rds.amazonaws.com}"
-        DB_PORT="${DATABASE_PORT:-5432}"
-        DB_NAME="${DATABASE_NAME:-appdb}"
-        DB_URL="postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
-      fi
-
-      if [ -n "$DB_PASS" ] || [ -n "$DB_URL" ]; then
-        cat <<EOF | ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "kubectl apply -f -"
-apiVersion: v1
-kind: Secret
-metadata:
-  name: db-credentials-secret
-  namespace: manveersyan-group
-type: Opaque
-stringData:
-  DATABASE_USER: "${DB_USER}"
-  DATABASE_PASSWORD: "${DB_PASS}"
-  DATABASE_URL: "${DB_URL}"
-  JWT_SECRET: "${JWT_SEC}"
-EOF
-      fi
-    - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "kubectl apply -k /opt/apps/projectATE/ate/k8s/overlays/production && kubectl rollout restart deployment -n manveersyan-group"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "dev"

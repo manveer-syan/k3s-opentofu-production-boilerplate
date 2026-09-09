@@ -40,6 +40,11 @@ spec:
           ports:
             - containerPort: 3000
               name: http
+          envFrom:
+            - configMapRef:
+                name: web-frontend-config
+            - secretRef:
+                name: web-frontend-secret
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -39,8 +39,10 @@ spec:
             - containerPort: 8080
               name: http
           envFrom:
+            - configMapRef:
+                name: api-gateway-config
             - secretRef:
-                name: db-credentials-secret
+                name: api-gateway-secret
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
