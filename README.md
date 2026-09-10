@@ -186,41 +186,38 @@ The platform implements two distinct container execution engines tailored for op
         +-----------------------+                       +-----------------------+
 ```
 
-### Production: Declarative K3s Kubernetes (`k8s/`)
+### Production: Enterprise Zero-Plaintext-Secret Kubernetes (`k8s/`)
 
-K3s provides full Kubernetes compliance without the multi-gigabyte RAM overhead of vanilla k8s or the $72/mo base charge of an AWS EKS control plane.
+The platform implements an **Enterprise Zero-Plaintext-Secret GitOps Layout** using Kustomize components and KSOPS (Kustomize SOPS plugin) with Age key encryption. Plaintext secrets are **never** committed to Git or exported to local/CI disk.
 
-```
+```text
 k8s/
-├── base/
-│   ├── namespace.yaml                 # manveersyan-group isolated namespace
-│   ├── secret.example.yaml            # Base secret manifest template (secrets injected via CI/CD / ESO)
-│   ├── external-secret.yaml           # External Secrets Operator (AWS Secrets Manager)
-│   ├── kustomization.yaml             # Core manifest aggregator
+├── base/                                  # Purely stateless, environment-agnostic manifests
+│   ├── namespace.yaml                     # manveersyan-group isolated namespace
+│   ├── kustomization.yaml                 # Base manifest aggregator
 │   ├── ingress/
-│   │   └── ingress.yaml               # Traefik path-based Ingress rules
-│   ├── api-gateway/
-│   │   ├── deployment.yaml            # GATE Deployment (ports, probes, securityContext)
-│   │   ├── service.yaml               # ClusterIP Service (:80 -> :8080)
-│   │   └── hpa.yaml                   # HorizontalPodAutoscaler (1-5 replicas, 80% CPU)
-│   ├── auth-service/
-│   │   ├── deployment.yaml            # STATE Deployment (ports, probes, securityContext)
-│   │   ├── service.yaml               # ClusterIP Service (:80 -> :5000)
-│   │   └── hpa.yaml                   # HorizontalPodAutoscaler (1-5 replicas, 80% CPU)
-│   ├── notification-service/
-│   │   ├── deployment.yaml            # DATE Deployment (worker threads, envFrom secrets)
-│   │   ├── service.yaml               # ClusterIP Service (:80 -> :7000)
-│   │   └── hpa.yaml                   # HorizontalPodAutoscaler (1-5 replicas, 80% CPU)
-│   └── web-frontend/
-│       ├── deployment.yaml            # FATE Deployment (static assets, reverse proxy)
-│       ├── service.yaml               # ClusterIP Service (:80 -> :3000)
-│       └── hpa.yaml                   # HorizontalPodAutoscaler (1-5 replicas, 80% CPU)
+│   │   └── ingress.yaml                   # Traefik path-based Ingress rules
+│   ├── web-frontend/                      # Deployment (ports, probes, envFrom), Service, HPA
+│   ├── api-gateway/                       # Deployment (ports, probes, envFrom), Service, HPA
+│   ├── auth-service/                      # Deployment (ports, probes, envFrom), Service, HPA
+│   └── notification-service/              # Deployment (ports, probes, envFrom), Service, HPA
+├── components/                            # Modular, opt-in operational policies
+│   ├── high-availability/                 # PodDisruptionBudgets (minAvailable: 2)
+│   └── strict-network/                    # Zero-trust Ingress/Egress NetworkPolicy
 └── overlays/
-    └── production/
-        ├── kustomization.yaml         # Production overlay (image tag overrides, patches)
-        ├── pdb.yaml                   # PodDisruptionBudgets (HA guarantee during node drain)
-        └── network-policy.yaml        # Calico / K3s NetworkPolicy firewalling
+    └── production/                        # Production Environment Overlay
+        ├── kustomization.yaml             # Master overlay (base + components + KSOPS generators)
+        └── apps/                          # App-decoupled configuration and KSOPS generators
+            ├── web-frontend/              # params.env, secret.enc.yaml, secret-generator.yaml
+            ├── api-gateway/               # params.env, secret.enc.yaml, secret-generator.yaml
+            ├── auth-service/              # params.env, secret.enc.yaml, secret-generator.yaml
+            └── notification-service/      # params.env, secret.enc.yaml, secret-generator.yaml
 ```
+
+#### Zero-Trust Secret Management (KSOPS + Age)
+- **Git Storage**: Secrets are stored exclusively as SOPS Age-encrypted manifests (`secret.enc.yaml`).
+- **In-Cluster Decryption**: Pull-based GitOps operators (ArgoCD or Flux) hold the Age private key in a cluster Secret. During sync, the operator executes KSOPS (`viaduct.ai/v1`), decrypting `secret.enc.yaml` **strictly in-memory** and streaming Kubernetes Secret objects directly to the API server.
+- **CI Pipeline Boundary**: The CI runner does **not** possess the SOPS Age key and executes **zero** secret decryption scripts.
 
 #### Pod Security Hardening Standards
 All production pods enforce enterprise DevSecOps policies in their container `securityContext`:
@@ -231,7 +228,7 @@ All production pods enforce enterprise DevSecOps policies in their container `se
 - `seccompProfile: type: RuntimeDefault` (Enforces Linux system call filtering).
 - **Probes**: Explicit HTTP `livenessProbe` and `readinessProbe` checking `/health` endpoints.
 
-#### Network Micro-Segmentation (`network-policy.yaml`)
+#### Network Micro-Segmentation (`strict-network` component)
 - **Ingress**: Pods reject all traffic except requests arriving from `kube-system` (Traefik Ingress) or same-namespace peers.
 - **Egress**: Pods are blocked from arbitrary internet communication; egress is restricted to RDS PostgreSQL (`10.0.0.0/16:5432`), External HTTPS/HTTP (`:443`, `:80`), and CoreDNS (`UDP 53`).
 
