@@ -1,0 +1,25 @@
+# ==============================================================================
+# ArgoCD Application Specification
+# Path: gitops/argocd/ate-application.yaml
+# ==============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ate-production
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/manveersyan-group/ate.git
+    targetRevision: dev
+    path: k8s/overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: manveersyan-group
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

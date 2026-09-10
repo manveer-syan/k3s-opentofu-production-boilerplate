@@ -7,19 +7,21 @@ version: '3.8'
 
 services:
   prometheus:
-    image: prom/prometheus:v2.48.0
-    container_name: monitoring-prometheus
+    image: victoriametrics/victoria-metrics:latest
+    container_name: monitoring-victoria-metrics
     restart: always
     volumes:
       - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus-data:/prometheus
+      - victoria-metrics-data:/victoria-metrics-data
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=15d'
+      - '-promscrape.config=/etc/prometheus/prometheus.yml'
+      - '-storageDataPath=/victoria-metrics-data'
+      - '-retentionPeriod=15d'
+      - '-httpListenAddr=:9090'
     expose:
       - "9090"
+      - "8428"
     networks:
       - app-network
 
@@ -60,5 +62,5 @@ services:
       - app-network
 
 volumes:
-  prometheus-data:
+  victoria-metrics-data:
   grafana-data:

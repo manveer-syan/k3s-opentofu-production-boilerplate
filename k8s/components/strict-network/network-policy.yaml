@@ -18,12 +18,26 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
   egress:
+    # DNS Resolution: CoreDNS in kube-system and K3s cluster DNS IP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+        - ipBlock:
+            cidr: 10.43.0.10/32
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Database: AWS RDS PostgreSQL in VPC private subnets
     - to:
         - ipBlock:
             cidr: 10.0.0.0/16
       ports:
         - protocol: TCP
           port: 5432
+    # External HTTP/HTTPS Egress
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
@@ -32,5 +46,3 @@ spec:
           port: 80
         - protocol: TCP
           port: 443
-        - protocol: UDP
-          port: 53

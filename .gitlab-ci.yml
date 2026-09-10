@@ -6,7 +6,7 @@
 stages:
   - validate
   - plan
-  - update-tags
+  - deploy
 
 variables:
   DOCKER_DRIVER: overlay2
@@ -69,10 +69,10 @@ plan_infrastructure:
     - if: $CI_COMMIT_BRANCH == "dev"
 
 # ------------------------------------------------------------------------------
-# Stage 3: Update Kustomize Image Tags (Pull-Based GitOps Trigger)
+# Stage 3: GitOps Deployment (Update Kustomize Image Tag in Git)
 # ------------------------------------------------------------------------------
-update_image_tags:
-  stage: update-tags
+deploy_tag_update:
+  stage: deploy
   image: alpine:latest
   before_script:
     - apk add --no-cache git bash sed
@@ -84,7 +84,12 @@ update_image_tags:
         git config user.name "GitLab CI Bot"
         git config user.email "ci-bot@manveersyan.com"
         git add k8s/overlays/production/kustomization.yaml
-        git commit -m "chore(gitops): update image tag for ${TRIGGERED_APP_NAME} to ${TRIGGERED_IMAGE_TAG} [skip ci]" || echo "No changes to commit"
+        if ! git diff --staged --quiet; then
+          git commit -m "chore(gitops): update image tag for ${TRIGGERED_APP_NAME} to ${TRIGGERED_IMAGE_TAG} [skip ci]"
+          git push "https://oauth2:${GITLAB_ACCESS_TOKEN:-$CI_JOB_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git" HEAD:$CI_COMMIT_REF_NAME
+        else
+          echo "No image tag changes to commit."
+        fi
       else
         echo "No image tag update requested. Pull-based GitOps operator (ArgoCD/Flux) handles reconciliation."
       fi

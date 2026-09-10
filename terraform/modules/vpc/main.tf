@@ -49,27 +49,6 @@ resource "aws_subnet" "private" {
   }
 }
 
-# Elastic IP for NAT Gateway
-resource "aws_eip" "nat" {
-  domain = "vpc"
-
-  tags = {
-    Name = "${var.project_name}-${var.environment}-nat-eip"
-  }
-}
-
-# Single NAT Gateway (Cost Optimized for under $200 budget constraint)
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-
-  tags = {
-    Name = "${var.project_name}-${var.environment}-nat-gw"
-  }
-
-  depends_on = [aws_internet_gateway.gw]
-}
-
 # Public Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
@@ -84,14 +63,10 @@ resource "aws_route_table" "public" {
   }
 }
 
-# Private Route Table routing through NAT Gateway
+# Private Route Table: fully isolated — no NAT Gateway, no outbound internet.
+# RDS only requires inbound traffic from EC2; no outbound internet access needed.
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
-  }
 
   tags = {
     Name = "${var.project_name}-${var.environment}-private-rt"
