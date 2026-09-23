@@ -5,6 +5,10 @@ namespace: manveersyan-group
 
 resources:
   - ../../base
+  - apps/web-frontend/secret.enc.yaml
+  - apps/api-gateway/secret.enc.yaml
+  - apps/auth-service/secret.enc.yaml
+  - apps/notification-service/secret.enc.yaml
 
 components:
   - ../../components/strict-network
@@ -26,21 +30,15 @@ configMapGenerator:
     envs:
       - apps/notification-service/params.env
 
-generators:
-  - apps/web-frontend/secret-generator.yaml
-  - apps/api-gateway/secret-generator.yaml
-  - apps/auth-service/secret-generator.yaml
-  - apps/notification-service/secret-generator.yaml
-
 images:
   - name: registry.gitlab.com/manveersyan-group/web-frontend
-    newTag: latest
+    newTag: v1.0.0
   - name: registry.gitlab.com/manveersyan-group/api-gateway
-    newTag: latest
+    newTag: v1.0.0
   - name: registry.gitlab.com/manveersyan-group/auth-service
-    newTag: latest
+    newTag: v1.0.0
   - name: registry.gitlab.com/manveersyan-group/notification-service
-    newTag: latest
+    newTag: v1.0.0
 
 patches:
   - target:

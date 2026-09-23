@@ -3,7 +3,7 @@
 [![GitLab CI/CD](https://img.shields.io/badge/GitLab%20CI%2FCD-pull--based%20GitOps-fc6d26?style=flat-square&logo=gitlab)](https://gitlab.com/manveersyan-group/ate)
 [![IaC Engine](https://img.shields.io/badge/IaC-OpenTofu%20%7C%20Terraform%20v1.6%2B-ffda44?style=flat-square&logo=opentofu)](https://opentofu.org/)
 [![Container Orchestration](https://img.shields.io/badge/Kubernetes-K3s%20v1.28%2B-326ce5?style=flat-square&logo=kubernetes)](https://k3s.io/)
-[![GitOps Engine](https://img.shields.io/badge/GitOps-Flux%20v2%20%2B%20KSOPS-5468ff?style=flat-square&logo=flux)](https://fluxcd.io/)
+[![GitOps Engine](https://img.shields.io/badge/GitOps-Flux%20v2%20Native%20SOPS-5468ff?style=flat-square&logo=flux)](https://fluxcd.io/)
 [![Cloud Provider](https://img.shields.io/badge/AWS-us--east--1-232f3e?style=flat-square&logo=amazon-aws)](https://aws.amazon.com/)
 [![Database](https://img.shields.io/badge/PostgreSQL-15.7%20RDS-4169e1?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
 [![Observability](https://img.shields.io/badge/Telemetry-VictoriaMetrics%20%26%20Grafana-663399?style=flat-square&logo=victoriametrics)](https://victoriametrics.com/)
@@ -20,7 +20,7 @@ This repository (`manveersyan-group/ate`) is the **Single Source of Truth (SSoT)
 1. **Lightweight Certified Kubernetes Engine**: Production runs on a single-node **K3s** cluster hosted on an **AWS EC2 `t3.small`** instance (2 vCPU, 2GB physical RAM, reinforced by a 2GB Linux swapfile to prevent OOM kernel panics).
 2. **FinOps Cost Optimization (NAT Gateway Elimination)**: The AWS VPC topology is engineered without an AWS NAT Gateway. The EC2 host resides in a public subnet mapped to an Elastic IP, while the AWS RDS PostgreSQL database is isolated in private subnets with no internet egress. This yields a direct cloud infrastructure savings of ~$32.00 to ~$45.00/month.
 3. **Strict Pull-Based GitOps**: **Flux v2** acts as the in-cluster GitOps operator. GitLab CI is restricted solely to image compilation, security scanning, container registry publishing, and updating target image tags in Git. CI holds **zero credentials** to the Kubernetes cluster API server.
-4. **Zero-Plaintext-Secret Architecture**: All production secrets are committed exclusively as **Mozilla SOPS** Age-encrypted manifests (`secret.enc.yaml`). The in-cluster operator decrypts secrets **strictly in-memory** via **KSOPS**; plaintext secrets are never written to disk on developer workstations, CI runners, or cluster hosts.
+4. **Zero-Plaintext-Secret Architecture**: All production secrets are committed exclusively as **Mozilla SOPS** Age-encrypted manifests (`secret.enc.yaml`). The in-cluster operator decrypts secrets **strictly in-memory** via **Flux v2 native SOPS provider**; plaintext secrets are never written to disk on developer workstations, CI runners, or cluster hosts.
 5. **Memory-Conscious Observability**: Replaced Prometheus with **VictoriaMetrics** as the core time-series metrics scraper, drastically reducing memory overhead while maintaining complete Prometheus PromQL API compatibility with Grafana.
 6. **Single-Node Operational Resilience**: PodDisruptionBudgets (`minAvailable: 2`) are decoupled into opt-in components and excluded from single-node production overlays to eliminate node-drain eviction deadlocks during maintenance.
 
@@ -68,7 +68,7 @@ flowchart TD
 
 ---
 
-## 3. Enterprise GitOps & Secret Workflow (Flux v2 + KSOPS)
+## 3. Enterprise GitOps & Secret Workflow (Flux v2 Native SOPS)
 
 Project ATE operates on a **strict pull-based GitOps reconciliation model**. The deployment boundary between the CI build infrastructure and the runtime Kubernetes cluster is decoupled through Git commits.
 
@@ -81,7 +81,6 @@ sequenceDiagram
     participant Git as GitLab Repository (dev/main)
     participant CI as GitLab CI/CD Runner
     participant Flux as Flux v2 (K3s In-Cluster)
-    participant KSOPS as KSOPS Decryption Engine
     participant K8s as Kubernetes API Server
 
     Dev->>Git: Push application or infrastructure changes
@@ -97,10 +96,9 @@ sequenceDiagram
     loop Every 60 seconds (Polling & Reconciliation)
         Flux->>Git: Detect new commit SHA (GitRepository)
         Flux->>Flux: Fetch manifests (Kustomization)
-        Flux->>KSOPS: Stream secret.enc.yaml to KSOPS generator
-        KSOPS->>KSOPS: Decrypt secrets IN-MEMORY using cluster Age key
-        Note over KSOPS,K8s: Plaintext secret is never written to disk
-        KSOPS->>K8s: Apply decrypted Kubernetes Secret & ConfigMap objects
+        Flux->>Flux: Decrypt secrets IN-MEMORY using cluster Age key (sops-age)
+        Note over Flux,K8s: Plaintext secret is never written to disk
+        Flux->>K8s: Apply decrypted Kubernetes Secret & ConfigMap objects
         Flux->>K8s: Apply Deployment, Service, Ingress, NetworkPolicy
         K8s->>K8s: Perform zero-downtime rolling update
     end
@@ -117,7 +115,7 @@ sequenceDiagram
     --namespace=flux-system \
     --from-file=age.agekey=/dev/stdin
   ```
-* **In-Memory Streaming**: During synchronization, Flux executes the KSOPS generator (`viaduct.ai/v1`) using the `sops-age` secret to decrypt the payloads directly in memory, injecting native `Secret` resources into the target namespace without writing plaintext bytes to the node filesystem.
+* **Native In-Memory Decryption**: During synchronization, Flux's `kustomize-controller` utilizes its built-in SOPS decryptor (`spec.decryption.provider: sops`) with the `sops-age` secret to decrypt the native `Secret` manifests directly in memory without writing plaintext bytes to the node filesystem or requiring external generator plugins.
 
 ---
 
@@ -167,12 +165,12 @@ sequenceDiagram
 │   │   └── strict-network/                # Zero-trust NetworkPolicy (CoreDNS & RDS egress rules)
 │   └── overlays/
 │       └── production/                    # Production cloud overlay
-│           ├── kustomization.yaml         # Master overlay combining base, components & generators
-│           └── apps/                      # Decoupled params and KSOPS generators
-│               ├── web-frontend/          # params.env, secret.enc.yaml, secret-generator.yaml
-│               ├── api-gateway/           # params.env, secret.enc.yaml, secret-generator.yaml
-│               ├── auth-service/          # params.env, secret.enc.yaml, secret-generator.yaml
-│               └── notification-service/  # params.env, secret.enc.yaml, secret-generator.yaml
+│           ├── kustomization.yaml         # Master overlay combining base, components & secrets
+│           └── apps/                      # Decoupled params and native SOPS-encrypted secrets
+│               ├── web-frontend/          # params.env, secret.enc.yaml
+│               ├── api-gateway/           # params.env, secret.enc.yaml
+│               ├── auth-service/          # params.env, secret.enc.yaml
+│               └── notification-service/  # params.env, secret.enc.yaml
 ├── observability/                         # Telemetry configuration assets
 │   ├── grafana/
 │   │   ├── dashboards/overview.json       # Unified platform dashboard

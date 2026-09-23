@@ -48,6 +48,14 @@ resource "aws_iam_policy" "ec2_policy" {
           "logs:CreateLogGroup"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "arn:aws:secretsmanager:*:*:secret:${var.project_name}-${var.environment}-sops-age-key*"
       }
     ]
   })

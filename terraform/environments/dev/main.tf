@@ -51,15 +51,15 @@ module "rds" {
 }
 
 module "ec2" {
-  source                = "../../modules/ec2"
-  project_name          = var.project_name
-  environment           = var.environment
-  subnet_id             = module.vpc.public_subnet_ids[0]
-  security_group_id     = module.security_groups.ec2_security_group_id
-  instance_type         = var.ec2_instance_type
-  iam_instance_profile  = module.iam.instance_profile_name
-  rds_endpoint          = module.rds.rds_endpoint
-  rds_dbname            = module.rds.database_name
-  rds_username          = var.rds_username
-  rds_password          = var.rds_password
+  source               = "../../modules/ec2"
+  project_name         = var.project_name
+  environment          = var.environment
+  subnet_id            = module.vpc.public_subnet_ids[0]
+  security_group_id    = module.security_groups.ec2_security_group_id
+  instance_type        = var.ec2_instance_type
+  iam_instance_profile = module.iam.instance_profile_name
+  rds_endpoint         = module.rds.rds_endpoint
+  rds_dbname           = module.rds.database_name
+  rds_username         = var.rds_username
+  rds_password         = var.rds_password
 }

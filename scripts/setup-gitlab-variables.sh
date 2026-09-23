@@ -18,10 +18,16 @@ set_var() {
   local masked=$3
 
   echo "Setting $key..."
-  glab variable set "$key" "$value" --repo "$PROJECT_PATH" --protected --masked="$masked" || \
-  curl --request POST --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-       "https://gitlab.com/api/v4/projects/${PROJECT_PATH//\//%2F}/variables" \
-       --form "key=$key" --form "value=$value" --form "protected=true" --form "masked=$masked"
+  if command -v glab >/dev/null 2>&1 && glab auth status >/dev/null 2>&1; then
+    glab variable set "$key" "$value" --repo "$PROJECT_PATH" --protected --masked="$masked"
+  elif [ -n "${GITLAB_TOKEN:-}" ]; then
+    curl --fail --silent --show-error --request POST --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" \
+         "https://gitlab.com/api/v4/projects/${PROJECT_PATH//\//%2F}/variables" \
+         --form "key=$key" --form "value=$value" --form "protected=true" --form "masked=$masked"
+  else
+    echo "Error: Neither glab CLI is authenticated nor is GITLAB_TOKEN set in environment."
+    return 1
+  fi
 }
 
 if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then

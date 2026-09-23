@@ -1,52 +1,211 @@
 # ==============================================================================
-# Prometheus Alerting Rules
+# VictoriaMetrics / Prometheus Alerting Rules
 # Path: observability/prometheus/alerts.yml
 # ==============================================================================
 
 groups:
-  - name: platform_alerts
+  # ----------------------------------------------------------------------------
+  # 1. Host & Infrastructure Alerts
+  # ----------------------------------------------------------------------------
+  - name: node_alerts
     rules:
-      - alert: InstanceDown
-        expr: up == 0
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Target Instance {{ $labels.instance }} Down"
-          description: "{{ $labels.job }} has been unresponsive for more than 5 minutes."
-
-      - alert: HighMemoryUsage
-        expr: container_memory_usage_bytes > 209715200 # 200MB
+      - alert: NodeCpuPressure
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
         for: 5m
         labels:
           severity: warning
+          tier: infrastructure
         annotations:
-          summary: "High Memory Consumption on {{ $labels.container_name }}"
-          description: "Container memory consumption exceeded 200MB threshold."
+          summary: "Host CPU utilization high (> 85%) on {{ $labels.instance }}"
+          description: "EC2 CPU usage has exceeded 85% for more than 5 minutes."
+          runbook_url: "docs/runbooks/high-cpu.md"
 
-      - alert: HighCpuUsage
-        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+      - alert: NodeMemoryPressure
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "Host memory exhaustion warning (< 15% available) on {{ $labels.instance }}"
+          description: "Physical RAM available is critically low on the K3s host."
+          runbook_url: "docs/runbooks/high-memory.md"
+
+      - alert: NodeSwapPressure
+        expr: ((node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / 1024 / 1024) > 256
         for: 5m
         labels:
           severity: warning
+          tier: infrastructure
         annotations:
-          summary: "High CPU Utilization on {{ $labels.container_name }}"
-          description: "Container CPU consumption exceeded 80% capacity for 5 minutes."
+          summary: "Excessive swap memory paging (> 256MB) on {{ $labels.instance }}"
+          description: "Host is actively swapping memory pages. Performance degradation imminent."
+          runbook_url: "docs/runbooks/high-memory.md"
 
-      - alert: Http5xxErrors
-        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.01
+      - alert: NodeDiskSpaceFillingFast
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "Root filesystem disk space < 20% on {{ $labels.instance }}"
+          description: "Root EBS volume is running out of disk space."
+          runbook_url: "docs/runbooks/disk-full.md"
+
+      - alert: NodeDiskCritical
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
         for: 2m
         labels:
           severity: critical
+          tier: infrastructure
         annotations:
-          summary: "High HTTP 5xx Error Rate detected on {{ $labels.job }}"
-          description: "HTTP 5xx server errors rate > 1% over 5-minute window."
+          summary: "CRITICAL: Root filesystem disk space < 10% on {{ $labels.instance }}"
+          description: "K3s node failure imminent due to disk starvation."
+          runbook_url: "docs/runbooks/disk-full.md"
 
-      - alert: ServiceUnhealthy
-        expr: probe_success == 0
+      - alert: HostDown
+        expr: up{job="node-exporter"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "Node Exporter Unresponsive on {{ $labels.instance }}"
+          description: "Node exporter agent has been unreachable for > 3 minutes."
+          runbook_url: "docs/runbooks/node-replacement.md"
+
+  # ----------------------------------------------------------------------------
+  # 2. Kubernetes Workload & Container Alerts
+  # ----------------------------------------------------------------------------
+  - name: kubernetes_alerts
+    rules:
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[10m]) * 600 > 3
         for: 2m
         labels:
           severity: critical
+          tier: kubernetes
         annotations:
-          summary: "Service Unhealthy Probe Failure on {{ $labels.instance }}"
-          description: "Blackbox probe health check failed for 2 consecutive minutes."
+          summary: "Pod CrashLoopBackOff: {{ $labels.pod }} in namespace {{ $labels.namespace }}"
+          description: "Container has restarted repeatedly (>3 times in 10 minutes)."
+          runbook_url: "docs/runbooks/service-down.md"
+
+      - alert: PodPending
+        expr: kube_pod_status_phase{phase="Pending"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          tier: kubernetes
+        annotations:
+          summary: "Pod stuck in Pending state: {{ $labels.pod }}"
+          description: "Pod cannot be scheduled on the node (insufficient CPU/memory or image pull error)."
+          runbook_url: "docs/runbooks/service-down.md"
+
+      - alert: ContainerOOMKilled
+        expr: kube_pod_container_status_terminated_reason{reason="OOMKilled"} == 1
+        labels:
+          severity: critical
+          tier: kubernetes
+        annotations:
+          summary: "Container OOMKilled: {{ $labels.container }} in pod {{ $labels.pod }}"
+          description: "Container exceeded its memory limit and was killed by the Linux kernel OOM killer."
+          runbook_url: "docs/runbooks/high-memory.md"
+
+      - alert: DeploymentReplicasUnavailable
+        expr: kube_deployment_status_replicas_available < kube_deployment_spec_replicas
+        for: 5m
+        labels:
+          severity: critical
+          tier: kubernetes
+        annotations:
+          summary: "Deployment {{ $labels.deployment }} unavailable replicas"
+          description: "Desired replicas does not match available replicas for 5 minutes."
+          runbook_url: "docs/runbooks/service-down.md"
+
+  # ----------------------------------------------------------------------------
+  # 3. HTTP Traffic & Golden Signals Alerts
+  # ----------------------------------------------------------------------------
+  - name: application_golden_signals
+    rules:
+      - alert: HttpHigh5xxRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          tier: application
+        annotations:
+          summary: "HTTP 5xx error rate > 1% on {{ $labels.job }}"
+          description: "Microservice is returning elevated server-side 5xx errors."
+          runbook_url: "docs/runbooks/service-down.md"
+
+      - alert: HttpLatencyP95High
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          tier: application
+        annotations:
+          summary: "p95 request latency > 500ms on {{ $labels.job }}"
+          description: "95th percentile latency exceeded 500ms threshold."
+          runbook_url: "docs/runbooks/high-cpu.md"
+
+      - alert: HttpLatencyP99Critical
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)) > 1.5
+        for: 3m
+        labels:
+          severity: critical
+          tier: application
+        annotations:
+          summary: "p99 request latency > 1500ms on {{ $labels.job }}"
+          description: "Severe latency degradation detected on application endpoints."
+          runbook_url: "docs/runbooks/high-cpu.md"
+
+  # ----------------------------------------------------------------------------
+  # 4. Database & Infrastructure Service Alerts
+  # ----------------------------------------------------------------------------
+  - name: database_and_gitops_alerts
+    rules:
+      - alert: PostgresqlHighConnections
+        expr: pg_stat_activity_count / 100 > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          tier: database
+        annotations:
+          summary: "PostgreSQL active connection pool > 80% capacity"
+          description: "Active connections approaching RDS max_connections limit."
+          runbook_url: "docs/runbooks/rds-unavailable.md"
+
+      - alert: CertificateExpiringSoonWarning
+        expr: (cert_expiry_timestamp_seconds - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          tier: security
+        annotations:
+          summary: "TLS Certificate expiring in < 30 days for {{ $labels.domain }}"
+          description: "Automated ACME renewal may have stalled."
+          runbook_url: "docs/security/tls-lifecycle.md"
+
+      - alert: CertificateExpiringCritical
+        expr: (cert_expiry_timestamp_seconds - time()) / 86400 < 7
+        for: 1h
+        labels:
+          severity: critical
+          tier: security
+        annotations:
+          summary: "CRITICAL: TLS Certificate expiring in < 7 days for {{ $labels.domain }}"
+          description: "Immediate manual certificate intervention required."
+          runbook_url: "docs/security/tls-lifecycle.md"
+
+      - alert: FluxReconciliationFailure
+        expr: gotk_reconcile_condition{status="False",type="Ready"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          tier: gitops
+        annotations:
+          summary: "Flux GitOps reconciliation failure on {{ $labels.name }}"
+          description: "Flux failed to sync Git repository or apply Kustomization manifests."
+          runbook_url: "docs/runbooks/flux-reconciliation-failure.md"

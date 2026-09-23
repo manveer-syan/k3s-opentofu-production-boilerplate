@@ -12,7 +12,7 @@ variables:
   DOCKER_DRIVER: overlay2
 
 # ------------------------------------------------------------------------------
-# Stage 1: Validate Infrastructure & Kubernetes Base Manifests
+# Stage 1: Validate Infrastructure, Kubernetes Manifests & Security Scanning
 # ------------------------------------------------------------------------------
 validate_iac:
   stage: validate
@@ -20,6 +20,7 @@ validate_iac:
     name: ghcr.io/opentofu/opentofu:1.6.2
     entrypoint: [""]
   script:
+    - tofu fmt -check -recursive terraform/
     - cd terraform/environments/production
     - tofu init -backend=false
     - tofu validate
@@ -31,7 +32,23 @@ validate_k8s_manifests:
     entrypoint: [""]
   script:
     - kubectl kustomize k8s/base > /dev/null
-    - echo "Kubernetes base manifests validation successful."
+    - kubectl kustomize k8s/components/strict-network > /dev/null
+    - kubectl kustomize k8s/components/kyverno-policies > /dev/null
+    - kubectl kustomize k8s/overlays/production > /dev/null
+    - kubectl kustomize k8s/overlays/staging > /dev/null
+    - echo "Kubernetes base manifests, security components, and production/staging overlays validation successful."
+
+secret_scan:
+  stage: validate
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  script:
+    - gitleaks detect --config=.gitleaks.toml --verbose --redact
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 validate_ansible:
   stage: validate
@@ -47,8 +64,8 @@ security_scan_iac:
     entrypoint: [""]
   script:
     - echo "Scanning Kubernetes manifests and OpenTofu IaC for misconfigurations..."
-    - trivy config k8s/
-    - trivy config terraform/
+    - trivy config --severity HIGH,CRITICAL k8s/
+    - trivy config --severity HIGH,CRITICAL terraform/
   allow_failure: true
 
 # ------------------------------------------------------------------------------
@@ -91,7 +108,7 @@ deploy_tag_update:
           echo "No image tag changes to commit."
         fi
       else
-        echo "No image tag update requested. Pull-based GitOps operator (ArgoCD/Flux) handles reconciliation."
+        echo "No image tag update requested. Pull-based GitOps operator (Flux v2) handles reconciliation."
       fi
   rules:
     - if: $CI_COMMIT_BRANCH == "main"

@@ -1,13 +1,26 @@
+# ==============================================================================
+# API Gateway Microservice Deployment (GATE)
+# Path: k8s/base/api-gateway/deployment.yaml
+# ==============================================================================
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-gateway
   namespace: manveersyan-group
+  annotations:
+    deployment.kubernetes.io/revision-description: "Release v1.2 - Hardened Production Baseline"
   labels:
     app.kubernetes.io/name: api-gateway
     app.kubernetes.io/part-of: manveersyan-platform
+    app.kubernetes.io/component: gateway
 spec:
-  replicas: 3
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: api-gateway
@@ -15,7 +28,12 @@ spec:
     metadata:
       labels:
         app: api-gateway
+        app.kubernetes.io/name: api-gateway
+        app.kubernetes.io/part-of: manveersyan-platform
     spec:
+      serviceAccountName: api-gateway-sa
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
       imagePullSecrets:
         - name: regcred
       topologySpreadConstraints:
@@ -50,20 +68,38 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              cpu: 150m
-              memory: 256Mi
+              cpu: 75m
+              memory: 96Mi
             limits:
-              cpu: 750m
-              memory: 512Mi
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}

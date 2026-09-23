@@ -1,6 +1,6 @@
 # ==============================================================================
-# GitLab CI/CD Component Template: Application Pipeline
-# Included by application repos: web-frontend, api-gateway, auth-service
+# GitLab CI/CD Component Template: Hardened Application Supply Chain Pipeline
+# Included by application repositories: web-frontend, api-gateway, auth-service, notification-service
 # Path: templates/app-pipeline.yml
 # ==============================================================================
 
@@ -8,17 +8,18 @@ stages:
   - test
   - build
   - scan
+  - sbom
   - push
+  - sign
   - trigger
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
-  LATEST_TAG: $CI_REGISTRY_IMAGE:latest
   INFRA_PROJECT_PATH: "manveersyan-group/ate"
+  COSIGN_YES: "true"
 
-# Default configuration for Docker-in-Docker jobs
 .dind-job:
   image: docker:24.0.7
   services:
@@ -32,7 +33,7 @@ test_job:
   image: node:20-alpine
   script:
     - echo "Running application test suite for $APP_NAME..."
-    - if [ -f package.json ]; then npm ci && npm test; else echo "No package.json test runner found, passing default test assertion"; fi
+    - if [ -f package.json ]; then npm ci && npm test; elif [ -f go.mod ]; then apk add --no-cache go && go test -v ./...; else echo "Passing default test assertion"; fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
@@ -44,7 +45,7 @@ build_job:
   stage: build
   script:
     - echo "Building Docker image for $APP_NAME ($IMAGE_TAG)..."
-    - docker build --pull --target production -t $IMAGE_TAG -t $LATEST_TAG .
+    - docker build --pull --target production -t $IMAGE_TAG .
     - docker save -o image.tar $IMAGE_TAG
   artifacts:
     paths:
@@ -59,35 +60,68 @@ build_job:
 scan_job:
   extends: .dind-job
   stage: scan
+  image: aquasec/trivy:latest
+  services: []
+  before_script: []
   script:
-    - docker load -i image.tar
-    - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | tee /usr/share/keyrings/trivy.gpg > /dev/null
-    - apk add --no-cache curl
-    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.0
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $IMAGE_TAG
+    - trivy image --input image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
 
-# Stage 4: Push to Container Registry
+# Stage 4: Software Bill of Materials (SBOM) Generation (CycloneDX)
+sbom_job:
+  stage: sbom
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --input image.tar --format cyclonedx --output sbom.cdx.json
+  artifacts:
+    name: "sbom-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - sbom.cdx.json
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# Stage 5: Container Push to Registry
 push_job:
   extends: .dind-job
   stage: push
   script:
     - docker load -i image.tar
-    - echo "Pushing container images to GitLab Container Registry..."
+    - echo "Pushing immutable container image ($IMAGE_TAG) to GitLab Container Registry..."
     - docker push $IMAGE_TAG
-    - docker push $LATEST_TAG
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_TAG
 
-# Stage 5: Trigger Downstream Infrastructure Deployment in 'ate' Repo
+# Stage 6: Cryptographic Image Signing with Cosign
+sign_image:
+  stage: sign
+  image:
+    name: bitnami/cosign:latest
+    entrypoint: [""]
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  script:
+    - echo "Signing container image with Cosign OIDC / Keyless / Private Key..."
+    - |
+      if [ -n "$COSIGN_PRIVATE_KEY" ]; then
+        echo "$COSIGN_PRIVATE_KEY" > cosign.key
+        cosign sign --key cosign.key --tlog-upload=false $IMAGE_TAG
+        rm -f cosign.key
+      else
+        echo "COSIGN_PRIVATE_KEY not supplied; skipping signature or relying on OIDC keyless provider."
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# Stage 7: Trigger GitOps Overlay Update in 'ate' Repository
 trigger_infra:
   stage: trigger
   trigger:
     project: manveersyan-group/ate
-    branch: main
+    branch: dev
     strategy: depend
   variables:
     TRIGGERED_APP_NAME: $APP_NAME

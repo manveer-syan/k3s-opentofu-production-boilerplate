@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
+  - serviceaccounts.yaml
   - web-frontend/deployment.yaml
   - web-frontend/service.yaml
   - web-frontend/hpa.yaml
@@ -15,4 +16,5 @@ resources:
   - notification-service/deployment.yaml
   - notification-service/service.yaml
   - notification-service/hpa.yaml
+  - ingress/middlewares.yaml
   - ingress/ingress.yaml

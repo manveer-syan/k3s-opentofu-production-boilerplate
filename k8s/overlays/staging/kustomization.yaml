@@ -1,0 +1,94 @@
+# ==============================================================================
+# Staging Environment Kustomization Overlay
+# Path: k8s/overlays/staging/kustomization.yaml
+# ==============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: staging-manveersyan-group
+
+resources:
+  - ../../base
+  - apps/web-frontend/secret.enc.yaml
+  - apps/api-gateway/secret.enc.yaml
+  - apps/auth-service/secret.enc.yaml
+  - apps/notification-service/secret.enc.yaml
+
+components:
+  - ../../components/strict-network
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: web-frontend-config
+    envs:
+      - apps/web-frontend/params.env
+  - name: api-gateway-config
+    envs:
+      - apps/api-gateway/params.env
+  - name: auth-service-config
+    envs:
+      - apps/auth-service/params.env
+  - name: notification-service-config
+    envs:
+      - apps/notification-service/params.env
+
+images:
+  - name: registry.gitlab.com/manveersyan-group/web-frontend
+    newTag: staging
+  - name: registry.gitlab.com/manveersyan-group/api-gateway
+    newTag: staging
+  - name: registry.gitlab.com/manveersyan-group/auth-service
+    newTag: staging
+  - name: registry.gitlab.com/manveersyan-group/notification-service
+    newTag: staging
+
+patches:
+  - target:
+      kind: Deployment
+      name: web-frontend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: auth-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: notification-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Ingress
+      name: platform-ingress
+    patch: |-
+      - op: replace
+        path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares
+        value: "staging-manveersyan-group-security-headers@kubernetescrd,staging-manveersyan-group-rate-limit@kubernetescrd"
+      - op: replace
+        path: /spec/rules/0/host
+        value: staging.ate.manveersyan.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: staging.ate.manveersyan.com
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: staging-ate-tls-cert
+      - op: remove
+        path: /spec/rules/1

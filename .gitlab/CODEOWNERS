@@ -1,0 +1,28 @@
+# Project ATE Code Ownership & Governance Specification
+# Defines required code reviewers for sensitive platform and infrastructure boundaries.
+
+# Default maintainers for any unmapped file
+* @manveersyan-group/maintainers
+
+# Infrastructure as Code (OpenTofu / Terraform modules & environments)
+/terraform/ @manveersyan-group/infrastructure-leads @manveersyan-group/security-leads
+
+# GitOps Engine & Source Declarations
+/gitops/ @manveersyan-group/gitops-maintainers @manveersyan-group/platform-engineers
+
+# Production Overlays & Secret Encryptions
+/k8s/overlays/production/ @manveersyan-group/production-release-managers @manveersyan-group/security-leads
+
+# Cryptographic Specifications & Key Mappings
+/.sops.yaml @manveersyan-group/security-leads
+/.gitleaks.toml @manveersyan-group/security-leads
+
+# CI/CD Pipelines & Supply Chain Templates
+/.gitlab-ci.yml @manveersyan-group/platform-engineers
+/templates/ @manveersyan-group/platform-engineers
+
+# Platform Automation Scripts & Operational Verification Gates
+/scripts/ @manveersyan-group/platform-engineers
+
+# Observability Alerting Rules & Logging Configurations
+/observability/ @manveersyan-group/sre-team

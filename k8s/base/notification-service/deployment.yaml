@@ -1,13 +1,26 @@
+# ==============================================================================
+# Notification Service Microservice Deployment (DATE)
+# Path: k8s/base/notification-service/deployment.yaml
+# ==============================================================================
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification-service
   namespace: manveersyan-group
+  annotations:
+    deployment.kubernetes.io/revision-description: "Release v1.2 - Hardened Production Baseline"
   labels:
     app.kubernetes.io/name: notification-service
     app.kubernetes.io/part-of: manveersyan-platform
+    app.kubernetes.io/component: notification
 spec:
-  replicas: 2
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: notification-service
@@ -15,7 +28,12 @@ spec:
     metadata:
       labels:
         app: notification-service
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/part-of: manveersyan-platform
     spec:
+      serviceAccountName: notification-service-sa
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
       imagePullSecrets:
         - name: regcred
       topologySpreadConstraints:
@@ -50,20 +68,38 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
-              cpu: 500m
-              memory: 256Mi
+              cpu: 250m
+              memory: 128Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 7000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /health
               port: 7000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 7000
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}

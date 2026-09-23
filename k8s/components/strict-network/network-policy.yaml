@@ -1,24 +1,94 @@
+# ==============================================================================
+# Zero-Trust Micro-Segmented Network Policies
+# Path: k8s/components/strict-network/network-policy.yaml
+# ==============================================================================
+
+# 1. Baseline: Default Deny All Ingress and Egress
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: platform-network-policy
+  name: default-deny-all
   namespace: manveersyan-group
 spec:
   podSelector: {}
   policyTypes:
     - Ingress
     - Egress
+---
+# 2. Ingress: Allow Ingress Controller (Traefik in kube-system) to Microservices
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik-ingress
+  namespace: manveersyan-group
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["web-frontend", "api-gateway", "auth-service", "notification-service"]
+  policyTypes:
+    - Ingress
   ingress:
     - from:
-        - podSelector: {}
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system
-        - namespaceSelector:
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 5000
+        - protocol: TCP
+          port: 7000
+---
+# 3. Ingress: Allow Internal East-West Microservice Routing
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-east-west-traffic
+  namespace: manveersyan-group
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["auth-service", "notification-service"]
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow API Gateway to communicate with Auth and Notification services
+    - from:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
+              app: api-gateway
+      ports:
+        - protocol: TCP
+          port: 5000
+        - protocol: TCP
+          port: 7000
+    # Allow Auth Service to trigger notification delivery
+    - from:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+      ports:
+        - protocol: TCP
+          port: 7000
+---
+# 4. Egress: Cluster DNS Resolution (CoreDNS in kube-system)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-coredns-egress
+  namespace: manveersyan-group
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
   egress:
-    # DNS Resolution: CoreDNS in kube-system and K3s cluster DNS IP
     - to:
         - namespaceSelector:
             matchLabels:
@@ -30,19 +100,53 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # Database: AWS RDS PostgreSQL in VPC private subnets
+---
+# 5. Egress: Allow Backend Services to Reach RDS PostgreSQL (Isolated Subnets)
+# FATE (web-frontend) is EXCLUDED - FATE cannot reach RDS!
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rds-database-egress
+  namespace: manveersyan-group
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["api-gateway", "auth-service", "notification-service"]
+  policyTypes:
+    - Egress
+  egress:
     - to:
         - ipBlock:
-            cidr: 10.0.0.0/16
+            cidr: 10.0.10.0/24
+        - ipBlock:
+            cidr: 10.0.11.0/24
       ports:
         - protocol: TCP
           port: 5432
-    # External HTTP/HTTPS Egress
+---
+# 6. Egress: Allow Outbound HTTPS for External Integrations & Webhooks
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-https-egress
+  namespace: manveersyan-group
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["auth-service", "notification-service"]
+  policyTypes:
+    - Egress
+  egress:
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/16
+              - 169.254.169.254/32
       ports:
-        - protocol: TCP
-          port: 80
         - protocol: TCP
           port: 443

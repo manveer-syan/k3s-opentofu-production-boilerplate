@@ -1,0 +1,38 @@
+# ==============================================================================
+# Kyverno Policy: Require CPU and Memory Requests and Limits
+# Path: k8s/components/kyverno-policies/require-requests-limits.yaml
+# ==============================================================================
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-requests-and-limits
+  annotations:
+    policies.kyverno.io/title: Require Resource Requests and Limits
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: validate-resources
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - manveersyan-group
+                - staging-manveersyan-group
+      validate:
+        message: "CPU and memory requests and limits are mandatory for all production containers."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests:
+                    memory: "?*"
+                    cpu: "?*"
+                  limits:
+                    memory: "?*"
+                    cpu: "?*"

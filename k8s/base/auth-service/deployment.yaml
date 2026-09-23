@@ -1,13 +1,26 @@
+# ==============================================================================
+# Auth Service Microservice Deployment (STATE)
+# Path: k8s/base/auth-service/deployment.yaml
+# ==============================================================================
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: auth-service
   namespace: manveersyan-group
+  annotations:
+    deployment.kubernetes.io/revision-description: "Release v1.2 - Hardened Production Baseline"
   labels:
     app.kubernetes.io/name: auth-service
     app.kubernetes.io/part-of: manveersyan-platform
+    app.kubernetes.io/component: auth
 spec:
-  replicas: 3
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: auth-service
@@ -15,7 +28,12 @@ spec:
     metadata:
       labels:
         app: auth-service
+        app.kubernetes.io/name: auth-service
+        app.kubernetes.io/part-of: manveersyan-platform
     spec:
+      serviceAccountName: auth-service-sa
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
       imagePullSecrets:
         - name: regcred
       topologySpreadConstraints:
@@ -50,20 +68,38 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 75m
+              memory: 96Mi
             limits:
               cpu: 500m
               memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /health
               port: 5000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 5000
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}

@@ -1,0 +1,35 @@
+# ==============================================================================
+# Kyverno Policy: Require Non-Root Execution
+# Path: k8s/components/kyverno-policies/require-non-root.yaml
+# ==============================================================================
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-non-root-execution
+  annotations:
+    policies.kyverno.io/title: Require Non-Root Execution
+    policies.kyverno.io/category: Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: check-run-as-non-root
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - manveersyan-group
+                - staging-manveersyan-group
+      validate:
+        message: "Containers must run as non-root with runAsNonRoot set to true."
+        pattern:
+          spec:
+            =(securityContext):
+              runAsNonRoot: true
+            containers:
+              - =(securityContext):
+                  runAsNonRoot: true

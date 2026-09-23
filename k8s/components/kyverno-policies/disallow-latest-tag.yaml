@@ -1,0 +1,32 @@
+# ==============================================================================
+# Kyverno Policy: Disallow ':latest' Image Tags
+# Path: k8s/components/kyverno-policies/disallow-latest-tag.yaml
+# ==============================================================================
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow ':latest' Tag
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: validate-image-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - manveersyan-group
+                - staging-manveersyan-group
+      validate:
+        message: "Using ':latest' tag is disallowed. Images must be pinned to explicit version tags or digests."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"

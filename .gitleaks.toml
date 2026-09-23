@@ -1,0 +1,24 @@
+# ==============================================================================
+# Gitleaks Configuration: Secret Scanning for Project ATE
+# Path: .gitleaks.toml
+# ==============================================================================
+
+title = "Project ATE Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore SOPS ciphertext, Age recipient public keys, and example configurations"
+paths = [
+  '''.*\.enc\.ya?ml$''',
+  '''.*\.example\.ya?ml$''',
+  '''\.sops\.yaml$''',
+  '''docker-compose/secrets\.enc\.env$'''
+]
+
+regexes = [
+  '''ENC\[AES256_GCM,data:.*\]''',
+  '''age1[a-z0-9]{58}''',
+  '''AGE-SECRET-KEY-1[A-Z0-9]{58}'''
+]
